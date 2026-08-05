@@ -1,0 +1,40 @@
+{
+  "name": "organizador-academico",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "cap:sync": "npx cap sync android",
+    "cap:open": "npx cap open android"
+  },
+  "dependencies": {
+    "@capacitor/android": "^6.1.2",
+    "@capacitor/app": "^6.0.1",
+    "@capacitor/browser": "^6.0.3",
+    "@capacitor/camera": "^6.0.2",
+    "@capacitor/core": "^6.1.2",
+    "@supabase/supabase-js": "^2.45.4",
+    "date-fns": "^3.6.0",
+    "@ffmpeg/ffmpeg": "^0.12.10",
+    "@ffmpeg/util": "^0.12.1",
+    "imagetracerjs": "^1.2.6",
+    "qrcode": "^1.5.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.26.2"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.1.2",
+    "@types/react": "^18.3.5",
+    "@types/react-dom": "^18.3.0",
+    "@types/qrcode": "^1.5.5",
+    "@vitejs/plugin-react": "^4.3.1",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.45",
+    "tailwindcss": "^3.4.10",
+    "typescript": "^5.5.4",
+    "vite": "^5.4.2"
+  }
+}
