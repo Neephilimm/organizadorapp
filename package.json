@@ -17,6 +17,7 @@
     "@capacitor/core": "^6.1.2",
     "@supabase/supabase-js": "^2.45.4",
     "date-fns": "^3.6.0",
+    "lucide-react": "^0.383.0",
     "@ffmpeg/ffmpeg": "^0.12.10",
     "@ffmpeg/util": "^0.12.1",
     "imagetracerjs": "^1.2.6",

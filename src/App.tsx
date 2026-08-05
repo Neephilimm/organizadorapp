@@ -1,7 +1,18 @@
 import { HashRouter, Routes, Route, NavLink } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { App as CapApp } from '@capacitor/app';
 import { Browser } from '@capacitor/browser';
+import {
+  Menu,
+  X,
+  CalendarDays,
+  Plus,
+  Tag,
+  Newspaper,
+  Wrench,
+  FolderOpen,
+  RefreshCw
+} from 'lucide-react';
 import { supabase } from './lib/supabase';
 import Dashboard from './pages/Dashboard';
 import Categorias from './pages/Categorias';
@@ -11,7 +22,19 @@ import Herramientas from './pages/Herramientas';
 import Hub from './pages/Hub';
 import Convertidor from './pages/Convertidor';
 
+const ITEMS_NAV = [
+  { to: '/', label: 'Semestre', icono: CalendarDays },
+  { to: '/nuevo', label: 'Nueva fecha', icono: Plus },
+  { to: '/categorias', label: 'Categorías', icono: Tag },
+  { to: '/noticias', label: 'Noticias', icono: Newspaper },
+  { to: '/herramientas', label: 'Herramientas', icono: Wrench },
+  { to: '/hub', label: 'Archivos', icono: FolderOpen },
+  { to: '/conversor', label: 'Conversor', icono: RefreshCw }
+];
+
 export default function App() {
+  const [menuAbierto, setMenuAbierto] = useState(false);
+
   useEffect(() => {
     const listener = CapApp.addListener('appUrlOpen', async ({ url }) => {
       if (!url.startsWith('cl.organizador.academico://dropbox-callback')) return;
@@ -34,74 +57,64 @@ export default function App() {
 
   return (
     <HashRouter>
-      <Routes>
-        <Route path="/" element={<Dashboard />} />
-        <Route path="/nuevo" element={<NuevoEvento />} />
-        <Route path="/categorias" element={<Categorias />} />
-        <Route path="/noticias" element={<Noticias />} />
-        <Route path="/herramientas" element={<Herramientas />} />
-        <Route path="/hub" element={<Hub />} />
-        <Route path="/conversor" element={<Convertidor />} />
-      </Routes>
+      <header className="fixed top-0 left-0 right-0 bg-white border-b border-ink/10 flex items-center px-4 py-3 z-30">
+        <button onClick={() => setMenuAbierto(true)} aria-label="Abrir menú">
+          <Menu size={24} className="text-ink" />
+        </button>
+        <span className="font-display text-lg text-ink ml-3">Organizador Académico</span>
+      </header>
 
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-ink/10 flex justify-around py-2 overflow-x-auto">
-        <NavLink
-          to="/"
-          className={({ isActive }) =>
-            `font-mono text-[10px] uppercase tracking-wide ${isActive ? 'text-teal' : 'text-ink/40'}`
-          }
-        >
-          Semestre
-        </NavLink>
-        <NavLink
-          to="/nuevo"
-          className={({ isActive }) =>
-            `font-mono text-[10px] uppercase tracking-wide ${isActive ? 'text-teal' : 'text-ink/40'}`
-          }
-        >
-          + Fecha
-        </NavLink>
-        <NavLink
-          to="/categorias"
-          className={({ isActive }) =>
-            `font-mono text-[10px] uppercase tracking-wide ${isActive ? 'text-teal' : 'text-ink/40'}`
-          }
-        >
-          Categorías
-        </NavLink>
-        <NavLink
-          to="/noticias"
-          className={({ isActive }) =>
-            `font-mono text-[10px] uppercase tracking-wide ${isActive ? 'text-teal' : 'text-ink/40'}`
-          }
-        >
-          Noticias
-        </NavLink>
-        <NavLink
-          to="/herramientas"
-          className={({ isActive }) =>
-            `font-mono text-[10px] uppercase tracking-wide ${isActive ? 'text-teal' : 'text-ink/40'}`
-          }
-        >
-          Herramientas
-        </NavLink>
-        <NavLink
-          to="/hub"
-          className={({ isActive }) =>
-            `font-mono text-[10px] uppercase tracking-wide ${isActive ? 'text-teal' : 'text-ink/40'}`
-          }
-        >
-          Archivos
-        </NavLink>
-        <NavLink
-          to="/conversor"
-          className={({ isActive }) =>
-            `font-mono text-[10px] uppercase tracking-wide ${isActive ? 'text-teal' : 'text-ink/40'}`
-          }
-        >
-          Conversor
-        </NavLink>
-      </nav>
+      {/* Fondo oscuro al abrir el menú */}
+      {menuAbierto && (
+        <div
+          className="fixed inset-0 bg-ink/40 z-40"
+          onClick={() => setMenuAbierto(false)}
+        />
+      )}
+
+      {/* Panel lateral */}
+      <aside
+        className={`fixed top-0 left-0 bottom-0 w-64 bg-white z-50 shadow-lg transition-transform duration-200 ${
+          menuAbierto ? 'translate-x-0' : '-translate-x-full'
+        }`}
+      >
+        <div className="flex items-center justify-between px-4 py-3 border-b border-ink/10">
+          <span className="font-display text-lg text-ink">Menú</span>
+          <button onClick={() => setMenuAbierto(false)} aria-label="Cerrar menú">
+            <X size={22} className="text-ink/60" />
+          </button>
+        </div>
+        <nav className="py-2">
+          {ITEMS_NAV.map(({ to, label, icono: Icono }) => (
+            <NavLink
+              key={to}
+              to={to}
+              end={to === '/'}
+              onClick={() => setMenuAbierto(false)}
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-4 py-3 font-body text-sm border-l-4 ${
+                  isActive ? 'border-teal text-ink bg-paper' : 'border-transparent text-ink/60'
+                }`
+              }
+            >
+              <Icono size={20} strokeWidth={2} />
+              {label}
+            </NavLink>
+          ))}
+        </nav>
+      </aside>
+
+      <div className="pt-14">
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/nuevo" element={<NuevoEvento />} />
+          <Route path="/categorias" element={<Categorias />} />
+          <Route path="/noticias" element={<Noticias />} />
+          <Route path="/herramientas" element={<Herramientas />} />
+          <Route path="/hub" element={<Hub />} />
+          <Route path="/conversor" element={<Convertidor />} />
+        </Routes>
+      </div>
     </HashRouter>
   );
 }

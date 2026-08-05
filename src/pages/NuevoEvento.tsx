@@ -123,55 +123,84 @@ export default function NuevoEvento() {
       </div>
 
       {modo === 'manual' && (
-        <form onSubmit={guardarManual} className="bg-white rounded-lg p-4 shadow-sm space-y-3">
-          <input
-            value={titulo}
-            onChange={e => setTitulo(e.target.value)}
-            placeholder="Título (ej: Entrega informe Regular 1)"
-            className="w-full font-body border border-ink/10 rounded px-3 py-2"
-            required
-          />
-          <textarea
-            value={descripcion}
-            onChange={e => setDescripcion(e.target.value)}
-            placeholder="Detalle (opcional)"
-            className="w-full font-body border border-ink/10 rounded px-3 py-2"
-            rows={2}
-          />
-          <input
-            type="date"
-            value={fecha}
-            onChange={e => setFecha(e.target.value)}
-            className="w-full font-body border border-ink/10 rounded px-3 py-2"
-            required
-          />
-          <select
-            value={tipo}
-            onChange={e => setTipo(e.target.value as TipoEvento)}
-            className="w-full font-body border border-ink/10 rounded px-3 py-2"
-          >
-            <option value="evaluacion">Evaluación</option>
-            <option value="tarea">Tarea</option>
-            <option value="entrega">Entrega</option>
-            <option value="presentacion">Presentación</option>
-            <option value="lectura">Control de lectura</option>
-            <option value="feriado">Feriado</option>
-            <option value="sin_clases">Sin clases</option>
-            <option value="otro">Otro</option>
-          </select>
-          <select
-            value={categoriaId}
-            onChange={e => setCategoriaId(e.target.value)}
-            className="w-full font-body border border-ink/10 rounded px-3 py-2"
-          >
-            <option value="">Sin categoría</option>
-            {categorias.map(c => (
-              <option key={c.id} value={c.id}>
-                {c.nombre}
-              </option>
-            ))}
-          </select>
-          <button type="submit" className="w-full bg-teal text-white rounded py-2 font-medium">
+        <form onSubmit={guardarManual} className="bg-white rounded-lg p-4 shadow-sm space-y-4">
+          <div>
+            <label className="font-mono text-xs uppercase tracking-wide text-ink/50 block mb-1">
+              Título
+            </label>
+            <input
+              value={titulo}
+              onChange={e => setTitulo(e.target.value)}
+              placeholder="Ej: Entrega informe Regular 1"
+              className="w-full font-body border border-ink/10 rounded px-3 py-2"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="font-mono text-xs uppercase tracking-wide text-ink/50 block mb-1">
+              Detalle (opcional)
+            </label>
+            <textarea
+              value={descripcion}
+              onChange={e => setDescripcion(e.target.value)}
+              className="w-full font-body border border-ink/10 rounded px-3 py-2"
+              rows={2}
+            />
+          </div>
+
+          <div>
+            <label className="font-mono text-xs uppercase tracking-wide text-ink/50 block mb-1">
+              Fecha
+            </label>
+            <input
+              type="date"
+              value={fecha}
+              onChange={e => setFecha(e.target.value)}
+              className="w-full font-body border border-ink/10 rounded px-3 py-2 text-ink"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="font-mono text-xs uppercase tracking-wide text-ink/50 block mb-1">
+              Tipo
+            </label>
+            <select
+              value={tipo}
+              onChange={e => setTipo(e.target.value as TipoEvento)}
+              className="w-full font-body border border-ink/10 rounded px-3 py-2"
+            >
+              <option value="evaluacion">Evaluación</option>
+              <option value="tarea">Tarea</option>
+              <option value="entrega">Entrega</option>
+              <option value="presentacion">Presentación</option>
+              <option value="lectura">Control de lectura</option>
+              <option value="feriado">Feriado</option>
+              <option value="sin_clases">Sin clases</option>
+              <option value="otro">Otro</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="font-mono text-xs uppercase tracking-wide text-ink/50 block mb-1">
+              Categoría
+            </label>
+            <select
+              value={categoriaId}
+              onChange={e => setCategoriaId(e.target.value)}
+              className="w-full font-body border border-ink/10 rounded px-3 py-2"
+            >
+              <option value="">Sin categoría</option>
+              {categorias.map(c => (
+                <option key={c.id} value={c.id}>
+                  {c.nombre}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <button type="submit" className="w-full bg-teal text-white rounded py-3 font-medium">
             Guardar
           </button>
         </form>
