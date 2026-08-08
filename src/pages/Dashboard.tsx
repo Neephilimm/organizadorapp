@@ -11,11 +11,23 @@ const ETIQUETAS_TIPO: Record<string, string> = {
   feriado: 'Feriado',
   sin_clases: 'Sin clases',
   lectura: 'Control de lectura',
-  otro: 'Otro'
+  otro: 'Otro',
+  canvas: 'Canvas'
+};
+
+type EventoUnificado = {
+  id: string;
+  titulo: string;
+  descripcion: string | null;
+  fecha: string;
+  tipo: string;
+  origen: 'manual' | 'imagen' | 'canvas';
+  categoria_id: string | null;
+  url?: string;
 };
 
 export default function Dashboard() {
-  const [eventos, setEventos] = useState<Evento[]>([]);
+  const [eventos, setEventos] = useState<EventoUnificado[]>([]);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [cargando, setCargando] = useState(true);
 
@@ -32,7 +44,35 @@ export default function Dashboard() {
       supabase.from('categorias').select('*')
     ]);
 
-    setEventos(eventosData ?? []);
+    let unificados: EventoUnificado[] = (eventosData ?? []).map((e: Evento) => ({
+      id: e.id,
+      titulo: e.titulo,
+      descripcion: e.descripcion,
+      fecha: e.fecha,
+      tipo: e.tipo,
+      origen: e.origen,
+      categoria_id: e.categoria_id
+    }));
+
+    // Trae las tareas de Canvas, si está conectado (falla en silencio si no lo está)
+    const { data: canvasData } = await supabase.functions.invoke('canvas-list', { body: {} });
+    if (canvasData?.ok && canvasData.tareas) {
+      const tareasCanvas: EventoUnificado[] = canvasData.tareas
+        .filter((t: any) => t.fecha)
+        .map((t: any, i: number) => ({
+          id: `canvas-${i}`,
+          titulo: t.titulo,
+          descripcion: t.curso,
+          fecha: t.fecha.slice(0, 10),
+          tipo: 'canvas',
+          origen: 'canvas' as const,
+          categoria_id: null,
+          url: t.url
+        }));
+      unificados = [...unificados, ...tareasCanvas].sort((a, b) => a.fecha.localeCompare(b.fecha));
+    }
+
+    setEventos(unificados);
     setCategorias(categoriasData ?? []);
     setCargando(false);
   }
@@ -67,12 +107,16 @@ export default function Dashboard() {
         {eventos.map(ev => {
           const dias = differenceInCalendarDays(parseISO(ev.fecha), new Date());
           const urgente = dias <= 3;
+          const Envoltorio: any = ev.url ? 'a' : 'div';
 
           return (
-            <div
+            <Envoltorio
               key={ev.id}
+              href={ev.url}
+              target={ev.url ? '_blank' : undefined}
+              rel={ev.url ? 'noreferrer' : undefined}
               className="bg-white rounded-lg p-4 flex items-start gap-3 shadow-sm border-l-4"
-              style={{ borderColor: colorCategoria(ev.categoria_id) }}
+              style={{ borderColor: ev.origen === 'canvas' ? '#D6A419' : colorCategoria(ev.categoria_id) }}
             >
               <div className="flex-1">
                 <div className="flex items-center gap-2">
@@ -81,6 +125,9 @@ export default function Dashboard() {
                   </span>
                   {ev.origen === 'imagen' && (
                     <span className="font-mono text-[10px] text-teal">· leído por IA</span>
+                  )}
+                  {ev.origen === 'canvas' && (
+                    <span className="font-mono text-[10px] text-amber">· Canvas</span>
                   )}
                 </div>
                 <h2 className="font-display text-lg text-ink leading-tight">{ev.titulo}</h2>
@@ -98,7 +145,7 @@ export default function Dashboard() {
                   {dias === 0 ? 'hoy' : dias === 1 ? 'mañana' : `en ${dias} días`}
                 </p>
               </div>
-            </div>
+            </Envoltorio>
           );
         })}
       </div>

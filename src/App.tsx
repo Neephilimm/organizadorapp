@@ -11,7 +11,8 @@ import {
   Newspaper,
   Wrench,
   FolderOpen,
-  RefreshCw
+  RefreshCw,
+  GraduationCap
 } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import Dashboard from './pages/Dashboard';
@@ -21,11 +22,15 @@ import Noticias from './pages/Noticias';
 import Herramientas from './pages/Herramientas';
 import Hub from './pages/Hub';
 import Convertidor from './pages/Convertidor';
+import Canvas from './pages/Canvas';
+import Login from './pages/Login';
+import type { Session } from '@supabase/supabase-js';
 
 const ITEMS_NAV = [
   { to: '/', label: 'Semestre', icono: CalendarDays },
   { to: '/nuevo', label: 'Nueva fecha', icono: Plus },
   { to: '/categorias', label: 'Categorías', icono: Tag },
+  { to: '/canvas', label: 'Canvas', icono: GraduationCap },
   { to: '/noticias', label: 'Noticias', icono: Newspaper },
   { to: '/herramientas', label: 'Herramientas', icono: Wrench },
   { to: '/hub', label: 'Archivos', icono: FolderOpen },
@@ -34,6 +39,15 @@ const ITEMS_NAV = [
 
 export default function App() {
   const [menuAbierto, setMenuAbierto] = useState(false);
+  const [sesion, setSesion] = useState<Session | null | undefined>(undefined);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setSesion(data.session));
+    const { data: listener } = supabase.auth.onAuthStateChange((_evento, nuevaSesion) => {
+      setSesion(nuevaSesion);
+    });
+    return () => listener.subscription.unsubscribe();
+  }, []);
 
   useEffect(() => {
     const listener = CapApp.addListener('appUrlOpen', async ({ url }) => {
@@ -54,6 +68,29 @@ export default function App() {
       listener.then(l => l.remove());
     };
   }, []);
+
+  if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
+    return (
+      <div className="min-h-screen bg-paper flex items-center justify-center px-6 text-center">
+        <div>
+          <h1 className="font-display text-2xl text-crimson mb-2">Falta configuración</h1>
+          <p className="font-body text-ink/70">
+            Este APK se compiló sin las variables VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY.
+            Revisa que existan como "Repository secrets" en GitHub con esos nombres exactos, y
+            vuelve a correr el workflow.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (sesion === undefined) {
+    return <div className="min-h-screen bg-paper flex items-center justify-center font-body text-ink/50">Cargando…</div>;
+  }
+
+  if (sesion === null) {
+    return <Login />;
+  }
 
   return (
     <HashRouter>
@@ -102,6 +139,12 @@ export default function App() {
             </NavLink>
           ))}
         </nav>
+        <button
+          onClick={() => supabase.auth.signOut()}
+          className="absolute bottom-4 left-4 right-4 font-mono text-xs uppercase text-ink/40 text-left"
+        >
+          Cerrar sesión
+        </button>
       </aside>
 
       <div className="pt-14">
@@ -109,6 +152,7 @@ export default function App() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/nuevo" element={<NuevoEvento />} />
           <Route path="/categorias" element={<Categorias />} />
+          <Route path="/canvas" element={<Canvas />} />
           <Route path="/noticias" element={<Noticias />} />
           <Route path="/herramientas" element={<Herramientas />} />
           <Route path="/hub" element={<Hub />} />

@@ -34,14 +34,33 @@ export default function NuevoEvento() {
       .then(({ data }) => setCategorias(data ?? []));
   }, []);
 
+  const [errorGuardar, setErrorGuardar] = useState<string | null>(null);
+  const [guardando, setGuardando] = useState(false);
+
   async function guardarManual(e: React.FormEvent) {
     e.preventDefault();
-    const {
-      data: { user }
-    } = await supabase.auth.getUser();
-    if (!user || !fecha || !titulo) return;
+    setErrorGuardar(null);
 
-    await supabase.from('eventos').insert({
+    if (!fecha || !titulo) {
+      setErrorGuardar('Falta el título o la fecha.');
+      return;
+    }
+
+    setGuardando(true);
+    const {
+      data: { user },
+      error: errorUsuario
+    } = await supabase.auth.getUser();
+
+    if (errorUsuario || !user) {
+      setErrorGuardar(
+        'No hay sesión activa (revisa que Supabase esté bien configurado y que hayas iniciado sesión).'
+      );
+      setGuardando(false);
+      return;
+    }
+
+    const { error: errorInsertar } = await supabase.from('eventos').insert({
       user_id: user.id,
       titulo,
       descripcion: descripcion || null,
@@ -50,6 +69,13 @@ export default function NuevoEvento() {
       categoria_id: categoriaId || null,
       origen: 'manual'
     });
+
+    setGuardando(false);
+
+    if (errorInsertar) {
+      setErrorGuardar(`No se pudo guardar: ${errorInsertar.message}`);
+      return;
+    }
 
     navigate('/');
   }
@@ -200,9 +226,14 @@ export default function NuevoEvento() {
             </select>
           </div>
 
-          <button type="submit" className="w-full bg-teal text-white rounded py-3 font-medium">
-            Guardar
+          <button
+            type="submit"
+            disabled={guardando}
+            className="w-full bg-teal text-white rounded py-3 font-medium disabled:opacity-50"
+          >
+            {guardando ? 'Guardando…' : 'Guardar'}
           </button>
+          {errorGuardar && <p className="font-body text-sm text-crimson">{errorGuardar}</p>}
         </form>
       )}
 
