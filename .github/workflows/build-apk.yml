@@ -37,6 +37,9 @@ jobs:
           npx cap add android || true
           npx cap sync android
 
+      - name: Generar íconos
+        run: npx @capacitor/assets generate --android --iconBackgroundColor '#ffffff' --iconBackgroundColorDark '#111111'
+
       - name: Compilar APK (debug)
         working-directory: android
         run: chmod +x gradlew && ./gradlew assembleDebug
