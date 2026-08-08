@@ -47,7 +47,31 @@ export default function App() {
       setSesion(nuevaSesion);
     });
     return () => listener.subscription.unsubscribe();
-  }, []);
+  }, [useEffect(() => {
+    const listener = CapApp.addListener('appUrlOpen', async ({ url }) => {
+      if (url.startsWith('cl.organizador.academico://login-callback')) {
+        await Browser.close();
+        await supabase.auth.exchangeCodeForSession(url);
+        return;
+      }
+
+      if (!url.startsWith('cl.organizador.academico://dropbox-callback')) return;
+
+      await Browser.close();
+      const code = new URL(url).searchParams.get('code');
+      if (!code) return;
+
+      const { data: session } = await supabase.auth.getSession();
+      await supabase.functions.invoke('dropbox-oauth-callback', {
+        body: { code },
+        headers: { Authorization: `Bearer ${session.session?.access_token}` }
+      });
+    });
+
+    return () => {
+      listener.then(l => l.remove());
+    };
+  }, []);]);
 
   useEffect(() => {
     const listener = CapApp.addListener('appUrlOpen', async ({ url }) => {
