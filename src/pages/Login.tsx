@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { Browser } from '@capacitor/browser';
 
 export default function Login() {
   const [modo, setModo] = useState<'entrar' | 'crear'>('entrar');
@@ -28,10 +29,16 @@ export default function Login() {
   }
 
   async function entrarConGoogle() {
-    await supabase.auth.signInWithOAuth({
+    const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { scopes: 'https://www.googleapis.com/auth/drive.readonly' }
+      options: {
+        scopes: 'https://www.googleapis.com/auth/drive.readonly',
+        redirectTo: 'cl.organizador.academico://login-callback',
+        skipBrowserRedirect: true
+      }
     });
+    if (error) { setError(error.message); return; }
+    if (data?.url) await Browser.open({ url: data.url });
   }
 
   return (
