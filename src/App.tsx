@@ -71,7 +71,7 @@ export default function App() {
     return () => {
       listener.then(l => l.remove());
     };
-  }, []);]);
+  }, []);
 
   useEffect(() => {
     const listener = CapApp.addListener('appUrlOpen', async ({ url }) => {
