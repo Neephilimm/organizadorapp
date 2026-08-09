@@ -104,14 +104,18 @@ export default function Hub() {
     if (inputArchivo.current) inputArchivo.current.value = '';
   }
 
-  async function conectarGoogleDrive() {
-    await supabase.auth.signInWithOAuth({
+ async function conectarGoogleDrive() {
+    const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
         scopes: 'https://www.googleapis.com/auth/drive.readonly',
-        queryParams: { access_type: 'offline', prompt: 'consent' }
+        queryParams: { access_type: 'offline', prompt: 'consent' },
+        redirectTo: 'cl.organizador.academico://login-callback',
+        skipBrowserRedirect: true
       }
     });
+    if (error) return;
+    if (data?.url) await Browser.open({ url: data.url });
   }
 
   async function conectarDropbox() {
