@@ -23,17 +23,32 @@ export default function Canvas() {
     cargar();
   }, []);
 
-  async function cargar() {
+ async function cargar() {
     setCargando(true);
     setError(null);
     const { data, error: err } = await supabase.functions.invoke('canvas-list', { body: {} });
 
-    if (err || !data?.ok) {
+    if (err) {
+      setConectado(true);
+      setError('No se pudo conectar con Canvas ahora mismo. Intenta más tarde.');
+      setCargando(false);
+      return;
+    }
+
+    if (!data?.ok) {
       setConectado(data?.error === 'Canvas no está conectado.' ? false : true);
       if (data?.error && data.error !== 'Canvas no está conectado.') setError(data.error);
       setCargando(false);
       return;
     }
+
+    setConectado(true);
+    setTareas(data.tareas ?? []);
+    setArchivos(data.archivos ?? []);
+    setCalificaciones(data.calificaciones ?? []);
+    setAnuncios(data.anuncios ?? []);
+    setCargando(false);
+  }
 
     setConectado(true);
     setTareas(data.tareas ?? []);
