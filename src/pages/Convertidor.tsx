@@ -2,6 +2,8 @@ import { useRef, useState } from 'react';
 import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { fetchFile, toBlobURL } from '@ffmpeg/util';
 import ImageTracer from 'imagetracerjs';
+import { Filesystem, Directory } from '@capacitor/filesystem';
+import { Share } from '@capacitor/share';
 
 const ffmpeg = new FFmpeg();
 let ffmpegCargado = false;
@@ -17,6 +19,33 @@ async function asegurarFFmpeg(onLog?: (m: string) => void) {
   ffmpegCargado = true;
 }
 
+function blobABase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const lector = new FileReader();
+    lector.onloadend = () => {
+      const resultado = lector.result as string;
+      resolve(resultado.split(',')[1] ?? '');
+    };
+    lector.onerror = reject;
+    lector.readAsDataURL(blob);
+  });
+}
+
+async function guardarYCompartir(blob: Blob, nombreArchivo: string) {
+  const base64 = await blobABase64(blob);
+
+  const escrito = await Filesystem.writeFile({
+    path: nombreArchivo,
+    data: base64,
+    directory: Directory.Cache
+  });
+
+  await Share.share({
+    title: nombreArchivo,
+    url: escrito.uri
+  });
+}
+
 const FORMATOS_AUDIO = ['mp3', 'wav', 'm4a'] as const;
 const FORMATOS_VIDEO = ['mp4', 'webm'] as const;
 
@@ -28,8 +57,9 @@ export default function Convertidor() {
   const [archivoVideo, setArchivoVideo] = useState<File | null>(null);
   const [formatoDestino, setFormatoDestino] = useState<string>('mp3');
   const [progreso, setProgreso] = useState<string>('');
-  const [resultadoUrl, setResultadoUrl] = useState<string | null>(null);
+  const [resultadoBlob, setResultadoBlob] = useState<Blob | null>(null);
   const [procesando, setProcesando] = useState(false);
+  const [guardando, setGuardando] = useState(false);
 
   // Imagen
   const inputImagen = useRef<HTMLInputElement>(null);
@@ -38,7 +68,7 @@ export default function Convertidor() {
   async function convertirVideo() {
     if (!archivoVideo) return;
     setProcesando(true);
-    setResultadoUrl(null);
+    setResultadoBlob(null);
     setProgreso('Cargando motor de conversión (una vez, ~30 MB)…');
 
     await asegurarFFmpeg(m => setProgreso(m));
@@ -59,9 +89,16 @@ export default function Convertidor() {
 
     const data = await ffmpeg.readFile(nombreSalida);
     const blob = new Blob([data], { type: esSoloAudio ? `audio/${formatoDestino}` : `video/${formatoDestino}` });
-    setResultadoUrl(URL.createObjectURL(blob));
+    setResultadoBlob(blob);
     setProgreso('¡Listo!');
     setProcesando(false);
+  }
+
+  async function descargarResultado() {
+    if (!resultadoBlob) return;
+    setGuardando(true);
+    await guardarYCompartir(resultadoBlob, `convertido.${formatoDestino}`);
+    setGuardando(false);
   }
 
   async function convertirImagenASVG(e: React.ChangeEvent<HTMLInputElement>) {
@@ -83,13 +120,12 @@ export default function Convertidor() {
     img.src = url;
   }
 
-  function descargarSVG() {
+  async function descargarSVG() {
     if (!svgResultado) return;
+    setGuardando(true);
     const blob = new Blob([svgResultado], { type: 'image/svg+xml' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'imagen.svg';
-    a.click();
+    await guardarYCompartir(blob, 'imagen.svg');
+    setGuardando(false);
   }
 
   return (
@@ -152,14 +188,14 @@ export default function Convertidor() {
             {procesando ? 'Procesando…' : 'Convertir'}
           </button>
           {progreso && <p className="font-mono text-xs text-ink/50">{progreso}</p>}
-          {resultadoUrl && (
-            <a
-              href={resultadoUrl}
-              download={`convertido.${formatoDestino}`}
-              className="block text-center bg-ink text-paper rounded py-2 font-body"
+          {resultadoBlob && (
+            <button
+              onClick={descargarResultado}
+              disabled={guardando}
+              className="block w-full text-center bg-ink text-paper rounded py-2 font-body disabled:opacity-50"
             >
-              Descargar resultado
-            </a>
+              {guardando ? 'Guardando…' : 'Guardar / Compartir resultado'}
+            </button>
           )}
         </section>
       )}
@@ -185,8 +221,12 @@ export default function Convertidor() {
                 className="border border-ink/10 rounded p-2 max-h-64 overflow-auto"
                 dangerouslySetInnerHTML={{ __html: svgResultado }}
               />
-              <button onClick={descargarSVG} className="w-full bg-ink text-paper rounded py-2 font-body">
-                Descargar SVG
+              <button
+                onClick={descargarSVG}
+                disabled={guardando}
+                className="w-full bg-ink text-paper rounded py-2 font-body disabled:opacity-50"
+              >
+                {guardando ? 'Guardando…' : 'Guardar / Compartir SVG'}
               </button>
             </>
           )}
