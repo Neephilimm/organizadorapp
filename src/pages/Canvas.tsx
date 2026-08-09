@@ -23,7 +23,7 @@ export default function Canvas() {
     cargar();
   }, []);
 
- async function cargar() {
+  async function cargar() {
     setCargando(true);
     setError(null);
     const { data, error: err } = await supabase.functions.invoke('canvas-list', { body: {} });
@@ -41,14 +41,6 @@ export default function Canvas() {
       setCargando(false);
       return;
     }
-
-    setConectado(true);
-    setTareas(data.tareas ?? []);
-    setArchivos(data.archivos ?? []);
-    setCalificaciones(data.calificaciones ?? []);
-    setAnuncios(data.anuncios ?? []);
-    setCargando(false);
-  }
 
     setConectado(true);
     setTareas(data.tareas ?? []);
