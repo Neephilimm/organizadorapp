@@ -10,6 +10,8 @@
     "cap:open": "npx cap open android"
   },
   "dependencies": {
+    "@capacitor/filesystem": "^6.0.1",
+    "@capacitor/share": "^6.0.2",
     "@capacitor/android": "^6.1.2",
     "@capacitor/app": "^6.0.1",
     "@capacitor/browser": "^6.0.3",
