@@ -33,7 +33,25 @@ Reglas:
 - Si no puedes determinar una fecha exacta para algo, no lo incluyas.
 - No inventes información que no esté en la imagen.`;
 
-serve(async req => {
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, GET, OPTIONS'
+};
+
+function withCors(handler: (req: Request) => Promise<Response>) {
+  return async (req: Request) => {
+    if (req.method === 'OPTIONS') {
+      return new Response('ok', { headers: corsHeaders });
+    }
+    const res = await handler(req);
+    const headers = new Headers(res.headers);
+    Object.entries(corsHeaders).forEach(([k, v]) => headers.set(k, v));
+    return new Response(res.body, { status: res.status, headers });
+  };
+}
+
+serve(withCors(async req => {
   if (req.method !== 'POST') {
     return new Response(JSON.stringify({ ok: false, error: 'Método no permitido' }), { status: 405 });
   }
@@ -89,4 +107,4 @@ serve(async req => {
   } catch (e) {
     return new Response(JSON.stringify({ ok: false, error: String(e) }), { status: 500 });
   }
-});
+}));
