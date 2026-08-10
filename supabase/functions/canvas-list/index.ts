@@ -13,7 +13,25 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
 const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 
-serve(async req => {
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'POST, GET, OPTIONS'
+};
+
+function withCors(handler: (req: Request) => Promise<Response>) {
+  return async (req: Request) => {
+    if (req.method === 'OPTIONS') {
+      return new Response('ok', { headers: corsHeaders });
+    }
+    const res = await handler(req);
+    const headers = new Headers(res.headers);
+    Object.entries(corsHeaders).forEach(([k, v]) => headers.set(k, v));
+    return new Response(res.body, { status: res.status, headers });
+  };
+}
+
+serve(withCors(async req => {
   try {
     const authHeader = req.headers.get('Authorization')!;
     const supabaseUser = createClient(SUPABASE_URL, Deno.env.get('SUPABASE_ANON_KEY')!, {
@@ -125,4 +143,4 @@ serve(async req => {
   } catch (e) {
     return new Response(JSON.stringify({ ok: false, error: String(e) }), { status: 500 });
   }
-});
+}));
