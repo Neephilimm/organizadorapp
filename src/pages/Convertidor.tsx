@@ -64,6 +64,7 @@ export default function Convertidor() {
   // Imagen
   const inputImagen = useRef<HTMLInputElement>(null);
   const [svgResultado, setSvgResultado] = useState<string | null>(null);
+  const canvasRasterRef = useRef<HTMLCanvasElement | null>(null);
 
   async function convertirVideo() {
     if (!archivoVideo) return;
@@ -116,6 +117,7 @@ export default function Convertidor() {
       const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
       const svg = ImageTracer.imagedataToSVG(imageData, { ltres: 1, qtres: 1, scale: 1 });
       setSvgResultado(svg);
+      canvasRasterRef.current = canvas;
     };
     img.src = url;
   }
@@ -125,6 +127,15 @@ export default function Convertidor() {
     setGuardando(true);
     const blob = new Blob([svgResultado], { type: 'image/svg+xml' });
     await guardarYCompartir(blob, 'imagen.svg');
+    setGuardando(false);
+  }
+
+  async function descargarComoPNG() {
+    const canvas = canvasRasterRef.current;
+    if (!canvas) return;
+    setGuardando(true);
+    const blob: Blob | null = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
+    if (blob) await guardarYCompartir(blob, 'imagen.png');
     setGuardando(false);
   }
 
@@ -222,12 +233,24 @@ export default function Convertidor() {
                 dangerouslySetInnerHTML={{ __html: svgResultado }}
               />
               <button
-                onClick={descargarSVG}
+                onClick={descargarComoPNG}
                 disabled={guardando}
                 className="w-full bg-ink text-paper rounded py-2 font-body disabled:opacity-50"
               >
-                {guardando ? 'Guardando…' : 'Guardar / Compartir SVG'}
+                {guardando ? 'Guardando…' : 'Guardar / Compartir como imagen (PNG)'}
               </button>
+              <button
+                onClick={descargarSVG}
+                disabled={guardando}
+                className="w-full bg-white border border-ink/10 text-ink rounded py-2 font-body disabled:opacity-50"
+              >
+                {guardando ? 'Guardando…' : 'Guardar archivo SVG (vectorial)'}
+              </button>
+              <p className="font-body text-xs text-ink/40">
+                Usa "imagen (PNG)" para compartir por WhatsApp o guardar en tu galería — el SVG
+                puro no es compatible con esas apps, pero sí puedes guardarlo como archivo y
+                abrirlo con un editor vectorial.
+              </p>
             </>
           )}
         </section>
