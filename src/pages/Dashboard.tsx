@@ -30,6 +30,7 @@ export default function Dashboard() {
   const [eventos, setEventos] = useState<EventoUnificado[]>([]);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [cargando, setCargando] = useState(true);
+  const [completando, setCompletando] = useState<string | null>(null);
 
   useEffect(() => {
     cargarDatos();
@@ -40,7 +41,12 @@ export default function Dashboard() {
     const hoy = format(new Date(), 'yyyy-MM-dd');
 
     const [{ data: eventosData }, { data: categoriasData }] = await Promise.all([
-      supabase.from('eventos').select('*').gte('fecha', hoy).order('fecha', { ascending: true }),
+      supabase
+        .from('eventos')
+        .select('*')
+        .gte('fecha', hoy)
+        .eq('completado', false)
+        .order('fecha', { ascending: true }),
       supabase.from('categorias').select('*')
     ]);
 
@@ -77,6 +83,13 @@ export default function Dashboard() {
     setCargando(false);
   }
 
+  async function marcarCompletado(id: string) {
+    setCompletando(id);
+    await supabase.from('eventos').update({ completado: true }).eq('id', id);
+    setEventos(prev => prev.filter(e => e.id !== id));
+    setCompletando(null);
+  }
+
   function colorCategoria(categoriaId: string | null) {
     return categorias.find(c => c.id === categoriaId)?.color ?? '#8A8F98';
   }
@@ -107,18 +120,29 @@ export default function Dashboard() {
         {eventos.map(ev => {
           const dias = differenceInCalendarDays(parseISO(ev.fecha), new Date());
           const urgente = dias <= 3;
-          const Envoltorio: any = ev.url ? 'a' : 'div';
+          const puedeCompletarse = ev.origen !== 'canvas';
 
           return (
-            <Envoltorio
+            <div
               key={ev.id}
-              href={ev.url}
-              target={ev.url ? '_blank' : undefined}
-              rel={ev.url ? 'noreferrer' : undefined}
               className="bg-white rounded-lg p-4 flex items-start gap-3 shadow-sm border-l-4"
               style={{ borderColor: ev.origen === 'canvas' ? '#D6A419' : colorCategoria(ev.categoria_id) }}
             >
-              <div className="flex-1">
+              {puedeCompletarse && (
+                <button
+                  onClick={() => marcarCompletado(ev.id)}
+                  disabled={completando === ev.id}
+                  aria-label="Marcar como completado"
+                  className="mt-1 w-6 h-6 shrink-0 rounded-full border-2 border-ink/20 disabled:opacity-40"
+                />
+              )}
+
+              <a
+                href={ev.url}
+                target={ev.url ? '_blank' : undefined}
+                rel={ev.url ? 'noreferrer' : undefined}
+                className="flex-1 min-w-0"
+              >
                 <div className="flex items-center gap-2">
                   <span className="font-mono text-xs uppercase tracking-wide text-ink/50">
                     {ETIQUETAS_TIPO[ev.tipo]}
@@ -134,7 +158,8 @@ export default function Dashboard() {
                 {ev.descripcion && (
                   <p className="font-body text-sm text-ink/60 mt-1">{ev.descripcion}</p>
                 )}
-              </div>
+              </a>
+
               <div className="text-right shrink-0">
                 <p
                   className={`font-mono text-sm font-semibold ${urgente ? 'text-crimson' : 'text-ink/70'}`}
@@ -145,7 +170,7 @@ export default function Dashboard() {
                   {dias === 0 ? 'hoy' : dias === 1 ? 'mañana' : `en ${dias} días`}
                 </p>
               </div>
-            </Envoltorio>
+            </div>
           );
         })}
       </div>
