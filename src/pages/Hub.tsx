@@ -8,6 +8,7 @@ type ArchivoHub = {
   tipo_archivo: string;
   preview?: string | null;
   url_externa?: string | null;
+  storage_path?: string | null;
   modificado?: string;
   compartido_por?: string | null;
 };
@@ -15,12 +16,19 @@ type ArchivoHub = {
 const DROPBOX_APP_KEY = import.meta.env.VITE_DROPBOX_APP_KEY as string;
 const DROPBOX_REDIRECT_URI = 'cl.organizador.academico://dropbox-callback';
 
+function nombreLegible(nombreEnStorage: string) {
+  // Los archivos se guardan como "<timestamp>_<nombre original>"
+  const sinPrefijo = nombreEnStorage.replace(/^\d+_/, '');
+  return decodeURIComponent(sinPrefijo);
+}
+
 export default function Hub() {
   const [seccion, setSeccion] = useState<'mios' | 'drive' | 'dropbox'>('mios');
   const [archivos, setArchivos] = useState<ArchivoHub[]>([]);
   const [cargando, setCargando] = useState(true);
   const [dropboxConectado, setDropboxConectado] = useState<boolean | null>(null);
   const [subiendo, setSubiendo] = useState(false);
+  const [abriendo, setAbriendo] = useState<string | null>(null);
   const inputArchivo = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -31,13 +39,29 @@ export default function Hub() {
     setCargando(true);
 
     if (s === 'mios') {
-      const { data } = await supabase.storage.from('archivos-usuario').list();
-      const propios: ArchivoHub[] = (data ?? []).map(f => ({
-        plataforma: 'supabase',
-        nombre: f.name,
-        tipo_archivo: f.name.split('.').pop() ?? '',
-        modificado: f.updated_at
-      }));
+      const {
+        data: { user }
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        setArchivos([]);
+        setCargando(false);
+        return;
+      }
+
+      const { data } = await supabase.storage.from('archivos-usuario').list(user.id, {
+        sortBy: { column: 'created_at', order: 'desc' }
+      });
+
+      const propios: ArchivoHub[] = (data ?? [])
+        .filter(f => f.id) // descarta subcarpetas, si las hubiera
+        .map(f => ({
+          plataforma: 'supabase',
+          nombre: nombreLegible(f.name),
+          tipo_archivo: f.name.split('.').pop() ?? '',
+          storage_path: `${user.id}/${f.name}`,
+          modificado: f.updated_at
+        }));
       setArchivos(propios);
     }
 
@@ -72,8 +96,8 @@ export default function Hub() {
   }
 
   async function subirArchivo(e: React.ChangeEvent<HTMLInputElement>) {
-    const archivo = e.target.files?.[0];
-    if (!archivo) return;
+    const lista = e.target.files;
+    if (!lista || lista.length === 0) return;
 
     setSubiendo(true);
     const {
@@ -84,27 +108,46 @@ export default function Hub() {
       return;
     }
 
-    const ruta = `${user.id}/${Date.now()}_${archivo.name}`;
-    const { error: errorSubida } = await supabase.storage
-      .from('archivos-usuario')
-      .upload(ruta, archivo);
+    for (const archivo of Array.from(lista)) {
+      const ruta = `${user.id}/${Date.now()}_${archivo.name}`;
+      const { error: errorSubida } = await supabase.storage
+        .from('archivos-usuario')
+        .upload(ruta, archivo);
 
-    if (!errorSubida) {
-      await supabase.from('archivos_subidos').insert({
-        user_id: user.id,
-        nombre: archivo.name,
-        storage_path: ruta,
-        tipo_archivo: archivo.type || archivo.name.split('.').pop(),
-        plataforma: 'supabase'
-      });
-      cargarSeccion('mios');
+      if (!errorSubida) {
+        await supabase.from('archivos_subidos').insert({
+          user_id: user.id,
+          nombre: archivo.name,
+          storage_path: ruta,
+          tipo_archivo: archivo.type || archivo.name.split('.').pop(),
+          plataforma: 'supabase'
+        });
+      }
     }
 
+    await cargarSeccion('mios');
     setSubiendo(false);
     if (inputArchivo.current) inputArchivo.current.value = '';
   }
 
- async function conectarGoogleDrive() {
+  async function abrirArchivo(a: ArchivoHub) {
+    setAbriendo(a.nombre);
+
+    if (a.plataforma === 'supabase' && a.storage_path) {
+      const { data, error } = await supabase.storage
+        .from('archivos-usuario')
+        .createSignedUrl(a.storage_path, 60 * 10);
+      if (!error && data?.signedUrl) {
+        await Browser.open({ url: data.signedUrl });
+      }
+    } else if (a.url_externa) {
+      await Browser.open({ url: a.url_externa });
+    }
+
+    setAbriendo(null);
+  }
+
+  async function conectarGoogleDrive() {
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
@@ -151,6 +194,7 @@ export default function Hub() {
           <input
             ref={inputArchivo}
             type="file"
+            multiple
             onChange={subirArchivo}
             className="hidden"
           />
@@ -180,7 +224,12 @@ export default function Hub() {
 
       <div className="space-y-2">
         {archivos.map((a, i) => (
-          <div key={i} className="bg-white rounded-lg p-3 flex items-center gap-3 shadow-sm">
+          <button
+            key={i}
+            onClick={() => abrirArchivo(a)}
+            disabled={abriendo === a.nombre}
+            className="w-full text-left bg-white rounded-lg p-3 flex items-center gap-3 shadow-sm disabled:opacity-50"
+          >
             {a.preview ? (
               <img src={a.preview} alt="" className="w-12 h-12 object-cover rounded" />
             ) : (
@@ -189,14 +238,19 @@ export default function Hub() {
               </div>
             )}
             <div className="flex-1 min-w-0">
-              <p className="font-mono text-[10px] uppercase text-ink/40">{a.plataforma}</p>
+              <p className="font-mono text-[10px] uppercase text-ink/40">
+                {abriendo === a.nombre ? 'Abriendo…' : a.plataforma}
+              </p>
               <p className="font-body text-ink truncate">{a.nombre}</p>
               {a.compartido_por && (
                 <p className="font-body text-xs text-ink/50">Compartido por {a.compartido_por}</p>
               )}
             </div>
-          </div>
+          </button>
         ))}
+        {!cargando && archivos.length === 0 && seccion === 'mios' && (
+          <p className="font-body text-sm text-ink/50">Todavía no has subido archivos.</p>
+        )}
       </div>
     </div>
   );
