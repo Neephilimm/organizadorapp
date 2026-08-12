@@ -94,6 +94,10 @@ export default function Dashboard() {
     return categorias.find(c => c.id === categoriaId)?.color ?? '#8A8F98';
   }
 
+  function nombreCategoria(categoriaId: string | null) {
+    return categorias.find(c => c.id === categoriaId)?.nombre ?? null;
+  }
+
   if (cargando) {
     return <div className="p-6 font-body text-ink/60">Cargando tu semestre…</div>;
   }
@@ -152,6 +156,14 @@ export default function Dashboard() {
                   )}
                   {ev.origen === 'canvas' && (
                     <span className="font-mono text-[10px] text-amber">· Canvas</span>
+                  )}
+                  {nombreCategoria(ev.categoria_id) && (
+                    <span
+                      className="font-mono text-[10px]"
+                      style={{ color: colorCategoria(ev.categoria_id) }}
+                    >
+                      · {nombreCategoria(ev.categoria_id)}
+                    </span>
                   )}
                 </div>
                 <h2 className="font-display text-lg text-ink leading-tight">{ev.titulo}</h2>
