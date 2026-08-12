@@ -49,25 +49,40 @@ export default function App() {
     return () => listener.subscription.unsubscribe();
   }, []);
 
-  useEffect(() => {
-    const listener = CapApp.addListener('appUrlOpen', async ({ url }) => {
-      if (url.startsWith('cl.organizador.academico://login-callback')) {
-        await Browser.close();
+  async function manejarUrlDeepLink(url: string) {
+    if (url.startsWith('cl.organizador.academico://login-callback')) {
+      await Browser.close().catch(() => {});
+      try {
         await supabase.auth.exchangeCodeForSession(url);
-        return;
+      } catch (e) {
+        console.error('Error al canjear el código de sesión:', e);
       }
+      return;
+    }
 
-      if (!url.startsWith('cl.organizador.academico://dropbox-callback')) return;
+    if (!url.startsWith('cl.organizador.academico://dropbox-callback')) return;
 
-      await Browser.close();
-      const code = new URL(url).searchParams.get('code');
-      if (!code) return;
+    await Browser.close().catch(() => {});
+    const code = new URL(url).searchParams.get('code');
+    if (!code) return;
 
-      const { data: session } = await supabase.auth.getSession();
-      await supabase.functions.invoke('dropbox-oauth-callback', {
-        body: { code },
-        headers: { Authorization: `Bearer ${session.session?.access_token}` }
-      });
+    const { data: session } = await supabase.auth.getSession();
+    await supabase.functions.invoke('dropbox-oauth-callback', {
+      body: { code },
+      headers: { Authorization: `Bearer ${session.session?.access_token}` }
+    });
+  }
+
+  useEffect(() => {
+    // Si Android cerró la app en segundo plano mientras estabas en Google/Dropbox,
+    // el regreso llega como un inicio "en frío" en vez de un evento en vivo: revisamos
+    // la URL de lanzamiento apenas arranca la app, además de escuchar en vivo abajo.
+    CapApp.getLaunchUrl().then(resultado => {
+      if (resultado?.url) manejarUrlDeepLink(resultado.url);
+    });
+
+    const listener = CapApp.addListener('appUrlOpen', ({ url }) => {
+      manejarUrlDeepLink(url);
     });
 
     return () => {
