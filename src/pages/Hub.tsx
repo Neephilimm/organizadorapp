@@ -29,6 +29,7 @@ export default function Hub() {
   const [dropboxConectado, setDropboxConectado] = useState<boolean | null>(null);
   const [subiendo, setSubiendo] = useState(false);
   const [abriendo, setAbriendo] = useState<string | null>(null);
+  const [eliminando, setEliminando] = useState<string | null>(null);
   const inputArchivo = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -147,6 +148,17 @@ export default function Hub() {
     setAbriendo(null);
   }
 
+  async function eliminarArchivo(a: ArchivoHub) {
+    if (a.plataforma !== 'supabase' || !a.storage_path) return;
+    if (!window.confirm(`¿Eliminar "${a.nombre}"? No se puede deshacer.`)) return;
+
+    setEliminando(a.storage_path);
+    await supabase.storage.from('archivos-usuario').remove([a.storage_path]);
+    await supabase.from('archivos_subidos').delete().eq('storage_path', a.storage_path);
+    setEliminando(null);
+    await cargarSeccion('mios');
+  }
+
   async function conectarGoogleDrive() {
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
@@ -224,12 +236,15 @@ export default function Hub() {
 
       <div className="space-y-2">
         {archivos.map((a, i) => (
-          <button
+          <div
             key={i}
-            onClick={() => abrirArchivo(a)}
-            disabled={abriendo === a.nombre}
-            className="w-full text-left bg-white rounded-lg p-3 flex items-center gap-3 shadow-sm disabled:opacity-50"
+            className="w-full bg-white rounded-lg p-3 flex items-center gap-3 shadow-sm"
           >
+            <button
+              onClick={() => abrirArchivo(a)}
+              disabled={abriendo === a.nombre}
+              className="flex-1 min-w-0 flex items-center gap-3 text-left disabled:opacity-50"
+            >
             {a.preview ? (
               <img src={a.preview} alt="" className="w-12 h-12 object-cover rounded" />
             ) : (
@@ -246,7 +261,19 @@ export default function Hub() {
                 <p className="font-body text-xs text-ink/50">Compartido por {a.compartido_por}</p>
               )}
             </div>
-          </button>
+            </button>
+
+            {a.plataforma === 'supabase' && (
+              <button
+                onClick={() => eliminarArchivo(a)}
+                disabled={eliminando === a.storage_path}
+                aria-label="Eliminar"
+                className="shrink-0 w-8 h-8 rounded-full text-crimson font-mono disabled:opacity-40"
+              >
+                {eliminando === a.storage_path ? '…' : '✕'}
+              </button>
+            )}
+          </div>
         ))}
         {!cargando && archivos.length === 0 && seccion === 'mios' && (
           <p className="font-body text-sm text-ink/50">Todavía no has subido archivos.</p>
