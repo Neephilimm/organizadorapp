@@ -40,6 +40,33 @@ jobs:
       - name: Generar íconos
         run: npx @capacitor/assets generate --android --iconBackgroundColor '#ffffff' --iconBackgroundColorDark '#111111'
 
+      - name: Registrar el enlace personalizado (deep link) en Android
+        run: |
+          cat > /tmp/patch_manifest.py << 'PYEOF2'
+          ruta = "android/app/src/main/AndroidManifest.xml"
+          with open(ruta) as f:
+              manifest = f.read()
+
+          filtro = (
+              "\n            <intent-filter>\n"
+              '                <action android:name="android.intent.action.VIEW" />\n'
+              '                <category android:name="android.intent.category.DEFAULT" />\n'
+              '                <category android:name="android.intent.category.BROWSABLE" />\n'
+              '                <data android:scheme="cl.organizador.academico" />\n'
+              "            </intent-filter>\n"
+          )
+
+          if "cl.organizador.academico" not in manifest:
+              manifest = manifest.replace("</activity>", filtro + "        </activity>", 1)
+              with open(ruta, "w") as f:
+                  f.write(manifest)
+              print("Intent-filter agregado.")
+          else:
+              print("Ya estaba presente.")
+          PYEOF2
+          python3 /tmp/patch_manifest.py
+          cat android/app/src/main/AndroidManifest.xml
+
       - name: Compilar APK (debug)
         working-directory: android
         run: chmod +x gradlew && ./gradlew assembleDebug
