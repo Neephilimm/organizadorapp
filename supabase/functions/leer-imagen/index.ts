@@ -31,7 +31,8 @@ Reglas:
 - Si el año no aparece en la imagen, usa el año actual: ${new Date().getFullYear()}.
 - Si un rango de fechas es una sola actividad recurrente ("durante el semestre"), créala como un solo evento con esa descripción, no la repitas.
 - Si no puedes determinar una fecha exacta para algo, no lo incluyas.
-- No inventes información que no esté en la imagen.`;
+- No inventes información que no esté en la imagen.
+- Si ves una tabla con varias filas (por ejemplo "Regular 1", "Regular 2", "Regular 3", "Sumativas"), o una lista con varios puntos numerados, DEBES incluir cada fila o punto como un evento separado — nunca te detengas después del primero. Antes de responder, cuenta cuántas filas/puntos con fecha hay en la imagen y asegúrate de que tu lista "eventos" tenga esa misma cantidad.\`;
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
