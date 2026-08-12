@@ -40,7 +40,7 @@ serve(withCors(async req => {
     const {
       data: { user }
     } = await supabaseUser.auth.getUser();
-    if (!user) return new Response(JSON.stringify({ ok: false, error: 'No autenticado.' }), { status: 401 });
+    if (!user) return new Response(JSON.stringify({ ok: false, error: 'No autenticado.' }), { status: 200 });
 
     const supabaseAdmin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
     const { data: conexion } = await supabaseAdmin
@@ -50,7 +50,7 @@ serve(withCors(async req => {
       .single();
 
     if (!conexion) {
-      return new Response(JSON.stringify({ ok: false, error: 'Canvas no está conectado.' }), { status: 404 });
+      return new Response(JSON.stringify({ ok: false, error: 'Canvas no está conectado.' }), { status: 200 });
     }
 
     const base = `https://${conexion.dominio}/api/v1`;
@@ -144,3 +144,4 @@ serve(withCors(async req => {
     return new Response(JSON.stringify({ ok: false, error: String(e) }), { status: 500 });
   }
 }));
+
