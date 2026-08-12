@@ -54,14 +54,14 @@ function withCors(handler: (req: Request) => Promise<Response>) {
 
 serve(withCors(async req => {
   if (req.method !== 'POST') {
-    return new Response(JSON.stringify({ ok: false, error: 'Método no permitido' }), { status: 405 });
+    return new Response(JSON.stringify({ ok: false, error: 'Método no permitido' }), { status: 200 });
   }
 
   try {
     const { imagenBase64, mimeType } = await req.json();
 
     if (!imagenBase64) {
-      return new Response(JSON.stringify({ ok: false, error: 'Falta la imagen.' }), { status: 400 });
+      return new Response(JSON.stringify({ ok: false, error: 'Falta la imagen.' }), { status: 200 });
     }
 
     const respuesta = await fetch(GROQ_URL, {
@@ -94,7 +94,7 @@ serve(withCors(async req => {
       const detalle = await respuesta.text();
       return new Response(
         JSON.stringify({ ok: false, error: `Groq respondió ${respuesta.status}: ${detalle}` }),
-        { status: 502 }
+        { status: 200 }
       );
     }
 
@@ -109,3 +109,4 @@ serve(withCors(async req => {
     return new Response(JSON.stringify({ ok: false, error: String(e) }), { status: 500 });
   }
 }));
+
