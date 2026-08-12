@@ -25,6 +25,7 @@ export default function NuevoEvento() {
   // Flujo de foto
   const [analizando, setAnalizando] = useState(false);
   const [detectados, setDetectados] = useState<EventoDetectado[]>([]);
+  const [categoriaFoto, setCategoriaFoto] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -81,6 +82,10 @@ export default function NuevoEvento() {
   }
 
   async function tomarFoto() {
+    if (!categoriaFoto) {
+      setError('Primero elige de qué ramo es esta evaluación.');
+      return;
+    }
     setError(null);
     setDetectados([]);
 
@@ -121,7 +126,7 @@ export default function NuevoEvento() {
       descripcion: ev.descripcion,
       fecha: ev.fecha,
       tipo: ev.tipo,
-      categoria_id: null,
+      categoria_id: categoriaFoto,
       origen: 'imagen' as const
     }));
 
@@ -239,6 +244,29 @@ export default function NuevoEvento() {
 
       {modo === 'foto' && (
         <div className="space-y-4">
+          <div className="bg-white rounded-lg p-4 shadow-sm">
+            <label className="font-mono text-xs uppercase tracking-wide text-ink/50 block mb-1">
+              ¿De qué ramo es? (obligatorio)
+            </label>
+            <select
+              value={categoriaFoto}
+              onChange={e => setCategoriaFoto(e.target.value)}
+              className="w-full font-body border border-ink/10 rounded px-3 py-2"
+            >
+              <option value="">Elige un ramo…</option>
+              {categorias.map(c => (
+                <option key={c.id} value={c.id}>
+                  {c.nombre}
+                </option>
+              ))}
+            </select>
+            {categorias.length === 0 && (
+              <p className="font-body text-xs text-ink/40 mt-1">
+                Todavía no tienes categorías creadas — ve a "Categorías" en el menú y crea una primero.
+              </p>
+            )}
+          </div>
+
           <button
             onClick={tomarFoto}
             disabled={analizando}
