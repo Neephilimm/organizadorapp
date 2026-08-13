@@ -139,7 +139,13 @@ export default function App() {
 
   return (
     <HashRouter>
-      <header className="fixed top-0 left-0 right-0 bg-white border-b border-ink/10 flex items-center px-4 py-3 z-30">
+      {errorAuth && (
+        <div className="fixed top-0 left-0 right-0 bg-crimson text-white text-xs font-mono p-3 z-50 break-words flex justify-between gap-2">
+          <span>{errorAuth}</span>
+          <button onClick={() => setErrorAuth(null)} className="shrink-0">✕</button>
+        </div>
+      )}
+      <header className={`fixed left-0 right-0 bg-white border-b border-ink/10 flex items-center px-4 py-3 z-30 ${errorAuth ? 'top-16' : 'top-0'}`}>
         <button onClick={() => setMenuAbierto(true)} aria-label="Abrir menú">
           <Menu size={24} className="text-ink" />
         </button>
