@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Browser } from '@capacitor/browser';
+import { App as CapApp } from '@capacitor/app';
 import { supabase } from '../lib/supabase';
 
 type ArchivoHub = {
@@ -34,6 +35,17 @@ export default function Hub() {
 
   useEffect(() => {
     cargarSeccion(seccion);
+  }, [seccion]);
+
+  useEffect(() => {
+    // Al volver de conectar Google Drive o Dropbox (el navegador se cierra y
+    // vuelves a esta pantalla), refresca la sección actual automáticamente.
+    const listener = CapApp.addListener('appStateChange', ({ isActive }) => {
+      if (isActive) cargarSeccion(seccion);
+    });
+    return () => {
+      listener.then(l => l.remove());
+    };
   }, [seccion]);
 
   async function cargarSeccion(s: typeof seccion) {
