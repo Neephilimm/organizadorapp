@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 
 type Tarea = { titulo: string; curso: string; fecha: string; url: string };
 type ArchivoCanvas = { nombre: string; curso: string; url: string; actualizado: string; tipo: string };
-type Calificacion = { curso: number; nombreCurso: string; notaActual: number | null; notaFinal: number | null };
+type Calificacion = { curso: number; nombreCurso: string; notaActual: number | null; notaFinal: number | null; url?: string };
 type Anuncio = { titulo: string; curso: string; fecha: string; mensaje: string; url: string };
 
 export default function Canvas() {
@@ -170,12 +170,18 @@ export default function Canvas() {
           <p className="font-body text-sm text-ink/50">No hay calificaciones disponibles.</p>
         )}
         {calificaciones.map((c, i) => (
-          <div key={i} className="bg-white rounded-lg p-3 shadow-sm flex items-center justify-between">
+          <a
+            key={i}
+            href={c.url}
+            target="_blank"
+            rel="noreferrer"
+            className="bg-white rounded-lg p-3 shadow-sm flex items-center justify-between"
+          >
             <p className="font-body text-ink">{c.nombreCurso}</p>
             <p className="font-mono text-lg font-semibold text-teal">
               {c.notaActual !== null ? c.notaActual : '—'}
             </p>
-          </div>
+          </a>
         ))}
       </div>
 
@@ -205,21 +211,32 @@ export default function Canvas() {
       </p>
 
       <h2 className="font-mono text-xs uppercase text-ink/50 mb-2">Archivos de tus cursos</h2>
-      <div className="space-y-2">
+      <div className="space-y-4">
         {archivos.length === 0 && !cargando && (
           <p className="font-body text-sm text-ink/50">No hay archivos recientes.</p>
         )}
-        {archivos.map((a, i) => (
-          <a
-            key={i}
-            href={a.url}
-            target="_blank"
-            rel="noreferrer"
-            className="block bg-white rounded-lg p-3 shadow-sm"
-          >
-            <p className="font-mono text-[10px] uppercase text-ink/40">{a.curso}</p>
-            <p className="font-body text-ink truncate">{a.nombre}</p>
-          </a>
+        {Object.entries(
+          archivos.reduce<Record<string, ArchivoCanvas[]>>((grupos, a) => {
+            (grupos[a.curso] ??= []).push(a);
+            return grupos;
+          }, {})
+        ).map(([curso, archivosDelCurso]) => (
+          <div key={curso}>
+            <p className="font-mono text-[10px] uppercase text-ink/40 mb-1">{curso}</p>
+            <div className="space-y-1">
+              {archivosDelCurso.map((a, i) => (
+                <a
+                  key={i}
+                  href={a.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block bg-white rounded-lg p-3 shadow-sm"
+                >
+                  <p className="font-body text-ink truncate">{a.nombre}</p>
+                </a>
+              ))}
+            </div>
+          </div>
         ))}
       </div>
     </div>
