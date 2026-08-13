@@ -128,13 +128,24 @@ serve(withCors(async req => {
       }
     }
 
+    function tipoDeTarea(asig: any): string {
+      if (asig.quiz_id) return 'Evaluación';
+      if ((asig.submission_types ?? []).includes('discussion_topic')) return 'Foro';
+      if ((asig.submission_types ?? []).includes('online_upload')) return 'Entrega de archivo';
+      if ((asig.submission_types ?? []).includes('online_text_entry')) return 'Tarea';
+      return 'Actividad';
+    }
+
     const tareas = eventos
       .filter((e: any) => e.assignment)
       .map((e: any) => ({
         titulo: e.title,
         curso: e.context_name,
         fecha: e.assignment.due_at,
-        url: e.html_url
+        url: e.html_url,
+        tipo: tipoDeTarea(e.assignment),
+        descripcion: (e.assignment.description ?? '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 600),
+        entregada: !!e.assignment.has_submitted_submissions
       }));
 
     return new Response(JSON.stringify({ ok: true, tareas, archivos, calificaciones, anuncios }), {
@@ -144,4 +155,5 @@ serve(withCors(async req => {
     return new Response(JSON.stringify({ ok: false, error: String(e) }), { status: 500 });
   }
 }));
+
 
