@@ -50,6 +50,18 @@ export default function Canvas() {
     setCargando(false);
   }
 
+  async function desconectar() {
+    if (!window.confirm('¿Desconectar Canvas? Podrás volver a conectarlo con otro dominio o clave.')) return;
+    const {
+      data: { user }
+    } = await supabase.auth.getUser();
+    if (!user) return;
+    await supabase.from('canvas_tokens').delete().eq('user_id', user.id);
+    setConectado(false);
+    setDominio('');
+    setToken('');
+  }
+
   async function guardarConexion(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -139,7 +151,15 @@ export default function Canvas() {
 
   return (
     <div className="min-h-screen bg-paper px-6 pt-8 pb-24">
-      <h1 className="font-display text-3xl text-ink mb-4">Canvas</h1>
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="font-display text-3xl text-ink">Canvas</h1>
+        <button
+          onClick={desconectar}
+          className="font-mono text-xs uppercase text-ink/50 border border-ink/10 rounded px-3 py-2"
+        >
+          Cambiar cuenta
+        </button>
+      </div>
 
       {cargando && <p className="font-body text-ink/50">Cargando…</p>}
       {error && <p className="font-body text-sm text-crimson bg-white rounded-lg p-3 mb-3">{error}</p>}
