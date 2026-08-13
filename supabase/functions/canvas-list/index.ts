@@ -88,6 +88,7 @@ serve(withCors(async req => {
     calificaciones.forEach((c: any) => {
       const curso = cursos.find((cur: any) => cur.id === c.curso);
       c.nombreCurso = curso?.name ?? `Curso ${c.curso}`;
+      c.url = `https://${conexion.dominio}/courses/${c.curso}/grades`;
     });
 
     // Archivos y anuncios recientes de cada curso (primeros 5 cursos, para no demorar)
