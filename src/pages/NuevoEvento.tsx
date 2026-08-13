@@ -99,12 +99,22 @@ export default function NuevoEvento() {
 
     setAnalizando(true);
     try {
-      const { data, error: fnError } = await supabase.functions.invoke('leer-imagen', {
-        body: { imagenBase64: foto.base64String, mimeType: `image/${foto.format}` }
-      });
+      const tiempoLimite = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('La IA se demoró demasiado en responder. Intenta de nuevo, o con una foto más liviana.')), 45000)
+      );
+
+      const { data, error: fnError } = await Promise.race([
+        supabase.functions.invoke('leer-imagen', {
+          body: { imagenBase64: foto.base64String, mimeType: `image/${foto.format}` }
+        }),
+        tiempoLimite
+      ]);
 
       if (fnError) throw fnError;
       if (!data.ok) throw new Error(data.error);
+      if (!data.eventos || data.eventos.length === 0) {
+        throw new Error('No se detectó ninguna fecha en la imagen. Prueba con una foto más nítida, sin reflejos.');
+      }
 
       setDetectados(data.eventos);
     } catch (e: any) {
