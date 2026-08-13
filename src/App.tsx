@@ -40,6 +40,7 @@ const ITEMS_NAV = [
 export default function App() {
   const [menuAbierto, setMenuAbierto] = useState(false);
   const [sesion, setSesion] = useState<Session | null | undefined>(undefined);
+  const [errorAuth, setErrorAuth] = useState<string | null>(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setSesion(data.session));
@@ -52,10 +53,24 @@ export default function App() {
   async function manejarUrlDeepLink(url: string) {
     if (url.startsWith('cl.organizador.academico://login-callback')) {
       await Browser.close().catch(() => {});
+
+      const parametros = new URL(url).searchParams;
+      const errorProveedor = parametros.get('error_description') || parametros.get('error');
+      if (errorProveedor) {
+        setErrorAuth(`Google/Supabase devolvió un error: ${errorProveedor}`);
+        return;
+      }
+      if (!parametros.get('code')) {
+        setErrorAuth(`El enlace de regreso no traía un código de sesión. URL recibida: ${url}`);
+        return;
+      }
+
       try {
-        await supabase.auth.exchangeCodeForSession(url);
+        const { error } = await supabase.auth.exchangeCodeForSession(url);
+        if (error) setErrorAuth(`No se pudo completar el inicio de sesión: ${error.message}`);
+        else setErrorAuth(null);
       } catch (e) {
-        console.error('Error al canjear el código de sesión:', e);
+        setErrorAuth(`No se pudo completar el inicio de sesión: ${String(e)}`);
       }
       return;
     }
@@ -110,7 +125,16 @@ export default function App() {
   }
 
   if (sesion === null) {
-    return <Login />;
+    return (
+      <>
+        {errorAuth && (
+          <div className="fixed top-0 left-0 right-0 bg-crimson text-white text-xs font-mono p-3 z-50 break-words">
+            {errorAuth}
+          </div>
+        )}
+        <Login />
+      </>
+    );
   }
 
   return (
