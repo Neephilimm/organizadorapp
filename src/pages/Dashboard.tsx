@@ -11,8 +11,7 @@ const ETIQUETAS_TIPO: Record<string, string> = {
   feriado: 'Feriado',
   sin_clases: 'Sin clases',
   lectura: 'Control de lectura',
-  otro: 'Otro',
-  canvas: 'Canvas'
+  otro: 'Otro'
 };
 
 type EventoUnificado = {
@@ -24,13 +23,25 @@ type EventoUnificado = {
   origen: 'manual' | 'imagen' | 'canvas';
   categoria_id: string | null;
   url?: string;
+  cursoNombre?: string;
 };
+
+const CLAVE_OCULTOS = 'canvas-dashboard-ocultos';
+
+function leerOcultos(): string[] {
+  try {
+    return JSON.parse(localStorage.getItem(CLAVE_OCULTOS) ?? '[]');
+  } catch {
+    return [];
+  }
+}
 
 export default function Dashboard() {
   const [eventos, setEventos] = useState<EventoUnificado[]>([]);
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [cargando, setCargando] = useState(true);
   const [completando, setCompletando] = useState<string | null>(null);
+  const [expandido, setExpandido] = useState<string | null>(null);
 
   useEffect(() => {
     cargarDatos();
@@ -39,6 +50,7 @@ export default function Dashboard() {
   async function cargarDatos() {
     setCargando(true);
     const hoy = format(new Date(), 'yyyy-MM-dd');
+    const ocultos = leerOcultos();
 
     const [{ data: eventosData }, { data: categoriasData }] = await Promise.all([
       supabase
@@ -66,15 +78,17 @@ export default function Dashboard() {
       const tareasCanvas: EventoUnificado[] = canvasData.tareas
         .filter((t: any) => t.fecha)
         .map((t: any, i: number) => ({
-          id: `canvas-${i}`,
+          id: `canvas-${i}-${t.titulo}`,
           titulo: t.titulo,
-          descripcion: t.curso,
+          descripcion: t.descripcion || null,
           fecha: t.fecha.slice(0, 10),
-          tipo: 'canvas',
+          tipo: t.tipo ?? 'Actividad',
           origen: 'canvas' as const,
           categoria_id: null,
-          url: t.url
-        }));
+          url: t.url,
+          cursoNombre: t.curso
+        }))
+        .filter(t => !ocultos.includes(t.id));
       unificados = [...unificados, ...tareasCanvas].sort((a, b) => a.fecha.localeCompare(b.fecha));
     }
 
@@ -88,6 +102,12 @@ export default function Dashboard() {
     await supabase.from('eventos').update({ completado: true }).eq('id', id);
     setEventos(prev => prev.filter(e => e.id !== id));
     setCompletando(null);
+  }
+
+  function ocultarDeCanvas(id: string) {
+    const ocultos = leerOcultos();
+    localStorage.setItem(CLAVE_OCULTOS, JSON.stringify([...ocultos, id]));
+    setEventos(prev => prev.filter(e => e.id !== id));
   }
 
   function colorCategoria(categoriaId: string | null) {
@@ -125,63 +145,95 @@ export default function Dashboard() {
           const dias = differenceInCalendarDays(parseISO(ev.fecha), new Date());
           const urgente = dias <= 3;
           const puedeCompletarse = ev.origen !== 'canvas';
+          const abierto = expandido === ev.id;
+          const etiquetaTipo = ev.origen === 'canvas' ? ev.tipo : ETIQUETAS_TIPO[ev.tipo] ?? ev.tipo;
 
           return (
             <div
               key={ev.id}
-              className="bg-white rounded-lg p-4 flex items-start gap-3 shadow-sm border-l-4"
+              className="bg-white rounded-lg p-4 shadow-sm border-l-4"
               style={{ borderColor: ev.origen === 'canvas' ? '#D6A419' : colorCategoria(ev.categoria_id) }}
             >
-              {puedeCompletarse && (
-                <button
-                  onClick={() => marcarCompletado(ev.id)}
-                  disabled={completando === ev.id}
-                  aria-label="Marcar como completado"
-                  className="mt-1 w-6 h-6 shrink-0 rounded-full border-2 border-ink/20 disabled:opacity-40"
-                />
-              )}
-
-              <a
-                href={ev.url}
-                target={ev.url ? '_blank' : undefined}
-                rel={ev.url ? 'noreferrer' : undefined}
-                className="flex-1 min-w-0"
-              >
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-xs uppercase tracking-wide text-ink/50">
-                    {ETIQUETAS_TIPO[ev.tipo]}
-                  </span>
-                  {ev.origen === 'imagen' && (
-                    <span className="font-mono text-[10px] text-teal">· leído por IA</span>
-                  )}
-                  {ev.origen === 'canvas' && (
-                    <span className="font-mono text-[10px] text-amber">· Canvas</span>
-                  )}
-                  {nombreCategoria(ev.categoria_id) && (
-                    <span
-                      className="font-mono text-[10px]"
-                      style={{ color: colorCategoria(ev.categoria_id) }}
-                    >
-                      · {nombreCategoria(ev.categoria_id)}
-                    </span>
-                  )}
-                </div>
-                <h2 className="font-display text-lg text-ink leading-tight">{ev.titulo}</h2>
-                {ev.descripcion && (
-                  <p className="font-body text-sm text-ink/60 mt-1">{ev.descripcion}</p>
+              <div className="flex items-start gap-3">
+                {puedeCompletarse && (
+                  <button
+                    onClick={() => marcarCompletado(ev.id)}
+                    disabled={completando === ev.id}
+                    aria-label="Marcar como completado"
+                    className="mt-1 w-6 h-6 shrink-0 rounded-full border-2 border-ink/20 disabled:opacity-40"
+                  />
                 )}
-              </a>
 
-              <div className="text-right shrink-0">
-                <p
-                  className={`font-mono text-sm font-semibold ${urgente ? 'text-crimson' : 'text-ink/70'}`}
+                <button
+                  onClick={() => setExpandido(abierto ? null : ev.id)}
+                  className="flex-1 min-w-0 text-left"
                 >
-                  {format(parseISO(ev.fecha), "d 'de' MMM", { locale: es })}
-                </p>
-                <p className="font-mono text-xs text-ink/40">
-                  {dias === 0 ? 'hoy' : dias === 1 ? 'mañana' : `en ${dias} días`}
-                </p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-mono text-xs uppercase tracking-wide text-ink/50">
+                      {etiquetaTipo}
+                    </span>
+                    {ev.cursoNombre && (
+                      <span className="font-mono text-[10px] text-amber">· {ev.cursoNombre}</span>
+                    )}
+                    {ev.origen === 'imagen' && (
+                      <span className="font-mono text-[10px] text-teal">· leído por IA</span>
+                    )}
+                    {nombreCategoria(ev.categoria_id) && (
+                      <span
+                        className="font-mono text-[10px]"
+                        style={{ color: colorCategoria(ev.categoria_id) }}
+                      >
+                        · {nombreCategoria(ev.categoria_id)}
+                      </span>
+                    )}
+                  </div>
+                  <h2 className="font-display text-lg text-ink leading-tight">{ev.titulo}</h2>
+                  {!abierto && ev.descripcion && (
+                    <p className="font-body text-sm text-ink/60 mt-1 line-clamp-2">{ev.descripcion}</p>
+                  )}
+                </button>
+
+                <div className="text-right shrink-0">
+                  <p
+                    className={`font-mono text-sm font-semibold ${urgente ? 'text-crimson' : 'text-ink/70'}`}
+                  >
+                    {format(parseISO(ev.fecha), "d 'de' MMM", { locale: es })}
+                  </p>
+                  <p className="font-mono text-xs text-ink/40">
+                    {dias === 0 ? 'hoy' : dias === 1 ? 'mañana' : `en ${dias} días`}
+                  </p>
+                </div>
               </div>
+
+              {abierto && (
+                <div className="mt-3 pt-3 border-t border-ink/10">
+                  {ev.descripcion ? (
+                    <p className="font-body text-sm text-ink/70 whitespace-pre-wrap">{ev.descripcion}</p>
+                  ) : (
+                    <p className="font-body text-sm text-ink/40">Sin descripción.</p>
+                  )}
+                  <div className="flex items-center gap-4 mt-3">
+                    {ev.url && (
+                      <a
+                        href={ev.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="font-mono text-xs uppercase text-teal"
+                      >
+                        Abrir en Canvas ↗
+                      </a>
+                    )}
+                    {ev.origen === 'canvas' && (
+                      <button
+                        onClick={() => ocultarDeCanvas(ev.id)}
+                        className="font-mono text-xs uppercase text-crimson"
+                      >
+                        Ocultar de aquí
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           );
         })}
