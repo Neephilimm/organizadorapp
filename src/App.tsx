@@ -26,15 +26,25 @@ import Canvas from './pages/Canvas';
 import Login from './pages/Login';
 import type { Session } from '@supabase/supabase-js';
 
-const ITEMS_NAV = [
-  { to: '/', label: 'Semestre', icono: CalendarDays },
-  { to: '/nuevo', label: 'Nueva fecha', icono: Plus },
-  { to: '/categorias', label: 'Categorías', icono: Tag },
-  { to: '/canvas', label: 'Canvas', icono: GraduationCap },
-  { to: '/noticias', label: 'Noticias', icono: Newspaper },
-  { to: '/herramientas', label: 'Herramientas', icono: Wrench },
-  { to: '/hub', label: 'Archivos', icono: FolderOpen },
-  { to: '/conversor', label: 'Conversor', icono: RefreshCw }
+const GRUPOS_NAV = [
+  {
+    titulo: 'Tu semestre',
+    items: [
+      { to: '/', label: 'Semestre', icono: CalendarDays },
+      { to: '/nuevo', label: 'Nueva fecha', icono: Plus },
+      { to: '/categorias', label: 'Categorías', icono: Tag },
+      { to: '/canvas', label: 'Canvas', icono: GraduationCap }
+    ]
+  },
+  {
+    titulo: 'Archivos y utilidades',
+    items: [
+      { to: '/hub', label: 'Archivos', icono: FolderOpen },
+      { to: '/conversor', label: 'Conversor', icono: RefreshCw },
+      { to: '/herramientas', label: 'Herramientas', icono: Wrench },
+      { to: '/noticias', label: 'Noticias', icono: Newspaper }
+    ]
+  }
 ];
 
 export default function App() {
@@ -151,6 +161,7 @@ export default function App() {
         </button>
         <span className="font-display text-lg text-ink ml-3">Organizador Académico</span>
       </header>
+      <div style={{ height: errorAuth ? '7.5rem' : '3.5rem' }} />
 
       {/* Fondo oscuro al abrir el menú */}
       {menuAbierto && (
@@ -172,22 +183,29 @@ export default function App() {
             <X size={22} className="text-ink/60" />
           </button>
         </div>
-        <nav className="py-2">
-          {ITEMS_NAV.map(({ to, label, icono: Icono }) => (
-            <NavLink
-              key={to}
-              to={to}
-              end={to === '/'}
-              onClick={() => setMenuAbierto(false)}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-4 py-3 font-body text-sm border-l-4 ${
-                  isActive ? 'border-teal text-ink bg-paper' : 'border-transparent text-ink/60'
-                }`
-              }
-            >
-              <Icono size={20} strokeWidth={2} />
-              {label}
-            </NavLink>
+        <nav className="py-2 overflow-y-auto" style={{ maxHeight: 'calc(100% - 130px)' }}>
+          {GRUPOS_NAV.map(grupo => (
+            <div key={grupo.titulo} className="mb-2">
+              <p className="font-mono text-[10px] uppercase tracking-widest text-ink/30 px-4 pt-3 pb-1">
+                {grupo.titulo}
+              </p>
+              {grupo.items.map(({ to, label, icono: Icono }) => (
+                <NavLink
+                  key={to}
+                  to={to}
+                  end={to === '/'}
+                  onClick={() => setMenuAbierto(false)}
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 px-4 py-3 font-body text-sm border-l-4 ${
+                      isActive ? 'border-teal text-ink bg-paper' : 'border-transparent text-ink/60'
+                    }`
+                  }
+                >
+                  <Icono size={20} strokeWidth={2} />
+                  {label}
+                </NavLink>
+              ))}
+            </div>
           ))}
         </nav>
         <button
@@ -198,7 +216,7 @@ export default function App() {
         </button>
       </aside>
 
-      <div className="pt-14">
+      <div>
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/nuevo" element={<NuevoEvento />} />
