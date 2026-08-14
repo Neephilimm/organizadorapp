@@ -27,6 +27,7 @@ type EventoUnificado = {
 };
 
 const CLAVE_OCULTOS = 'canvas-dashboard-ocultos';
+const CLAVE_FERIADOS_SYNC = 'feriados-sincronizados-anio';
 
 function leerOcultos(): string[] {
   try {
@@ -44,8 +45,15 @@ export default function Dashboard() {
   const [expandido, setExpandido] = useState<string | null>(null);
 
   useEffect(() => {
-    cargarDatos();
+    sincronizarFeriadosSiHaceFalta().finally(cargarDatos);
   }, []);
+
+  async function sincronizarFeriadosSiHaceFalta() {
+    const anio = String(new Date().getFullYear());
+    if (localStorage.getItem(CLAVE_FERIADOS_SYNC) === anio) return;
+    const { data } = await supabase.functions.invoke('sincronizar-feriados', { body: {} });
+    if (data?.ok) localStorage.setItem(CLAVE_FERIADOS_SYNC, anio);
+  }
 
   async function cargarDatos() {
     setCargando(true);
