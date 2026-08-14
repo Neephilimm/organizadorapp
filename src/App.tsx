@@ -12,7 +12,8 @@ import {
   Wrench,
   FolderOpen,
   RefreshCw,
-  GraduationCap
+  GraduationCap,
+  Settings
 } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import Dashboard from './pages/Dashboard';
@@ -23,6 +24,7 @@ import Herramientas from './pages/Herramientas';
 import Hub from './pages/Hub';
 import Convertidor from './pages/Convertidor';
 import Canvas from './pages/Canvas';
+import Ajustes from './pages/Ajustes';
 import Login from './pages/Login';
 import type { Session } from '@supabase/supabase-js';
 
@@ -44,6 +46,10 @@ const GRUPOS_NAV = [
       { to: '/herramientas', label: 'Herramientas', icono: Wrench },
       { to: '/noticias', label: 'Noticias', icono: Newspaper }
     ]
+  },
+  {
+    titulo: 'Cuenta',
+    items: [{ to: '/ajustes', label: 'Ajustes', icono: Settings }]
   }
 ];
 
@@ -183,7 +189,7 @@ export default function App() {
             <X size={22} className="text-ink/60" />
           </button>
         </div>
-        <nav className="py-2 overflow-y-auto" style={{ maxHeight: 'calc(100% - 130px)' }}>
+        <nav className="py-2 overflow-y-auto" style={{ maxHeight: 'calc(100% - 56px)' }}>
           {GRUPOS_NAV.map(grupo => (
             <div key={grupo.titulo} className="mb-2">
               <p className="font-mono text-[10px] uppercase tracking-widest text-ink/30 px-4 pt-3 pb-1">
@@ -208,12 +214,6 @@ export default function App() {
             </div>
           ))}
         </nav>
-        <button
-          onClick={() => supabase.auth.signOut()}
-          className="absolute bottom-4 left-4 right-4 font-mono text-xs uppercase text-ink/40 text-left"
-        >
-          Cerrar sesión
-        </button>
       </aside>
 
       <div>
@@ -226,6 +226,7 @@ export default function App() {
           <Route path="/herramientas" element={<Herramientas />} />
           <Route path="/hub" element={<Hub />} />
           <Route path="/conversor" element={<Convertidor />} />
+          <Route path="/ajustes" element={<Ajustes />} />
         </Routes>
       </div>
     </HashRouter>
