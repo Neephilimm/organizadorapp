@@ -183,6 +183,7 @@ export default function NuevoEvento() {
       {cargandoEdicion ? (
         <p className="font-body text-ink/50">Cargando…</p>
       ) : (
+      <>
       <div className="flex gap-2 mb-6">
         <button
           onClick={() => setModo('manual')}
@@ -357,7 +358,7 @@ export default function NuevoEvento() {
           )}
         </div>
       )}
-      </div>
+      </>
       )}
     </div>
   );
