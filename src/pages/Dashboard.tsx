@@ -45,14 +45,18 @@ export default function Dashboard() {
   const [expandido, setExpandido] = useState<string | null>(null);
 
   useEffect(() => {
-    sincronizarFeriadosSiHaceFalta().finally(cargarDatos);
+    cargarDatos();
+    sincronizarFeriadosSiHaceFalta();
   }, []);
 
   async function sincronizarFeriadosSiHaceFalta() {
     const anio = String(new Date().getFullYear());
     if (localStorage.getItem(CLAVE_FERIADOS_SYNC) === anio) return;
     const { data } = await supabase.functions.invoke('sincronizar-feriados', { body: {} });
-    if (data?.ok) localStorage.setItem(CLAVE_FERIADOS_SYNC, anio);
+    if (data?.ok) {
+      localStorage.setItem(CLAVE_FERIADOS_SYNC, anio);
+      if (data.agregados > 0) cargarDatos();
+    }
   }
 
   async function cargarDatos() {
