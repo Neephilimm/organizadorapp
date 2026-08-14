@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { supabase, Evento, Categoria } from '../lib/supabase';
 import { format, differenceInCalendarDays, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -267,6 +268,14 @@ export default function Dashboard() {
                       >
                         Ocultar de aquí
                       </button>
+                    )}
+                    {ev.origen !== 'canvas' && (
+                      <Link
+                        to={`/nuevo?editar=${ev.id}`}
+                        className="font-mono text-xs uppercase text-ink/50"
+                      >
+                        Editar
+                      </Link>
                     )}
                   </div>
                 </div>
