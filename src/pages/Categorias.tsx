@@ -38,7 +38,11 @@ export default function Categorias() {
 
   return (
     <div className="min-h-screen bg-paper px-6 pt-8 pb-24">
-      <h1 className="font-display text-3xl text-ink mb-6">Tus categorías</h1>
+      <h1 className="font-display text-3xl text-ink mb-1">Tus categorías</h1>
+      <p className="font-body text-sm text-ink/50 mb-6">
+        Agrupa tus fechas por ramo o tema, con un color propio, para distinguirlas de un vistazo en
+        el Dashboard.
+      </p>
 
       <form onSubmit={crearCategoria} className="bg-white rounded-lg p-4 shadow-sm mb-6">
         <label className="font-mono text-xs uppercase tracking-wide text-ink/50 block mb-2">
@@ -70,7 +74,15 @@ export default function Categorias() {
         </button>
       </form>
 
+      {categorias.length > 0 && (
+        <p className="font-mono text-xs uppercase tracking-widest text-ink/40 mb-2">
+          Existentes ({categorias.length})
+        </p>
+      )}
       <div className="space-y-2">
+        {categorias.length === 0 && (
+          <p className="font-body text-sm text-ink/40">Todavía no has creado ninguna.</p>
+        )}
         {categorias.map(cat => (
           <div key={cat.id} className="bg-white rounded-lg p-3 flex items-center justify-between shadow-sm">
             <div className="flex items-center gap-3">
