@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { supabase, Categoria, TipoEvento } from '../lib/supabase';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 type EventoDetectado = {
   titulo: string;
@@ -12,8 +12,11 @@ type EventoDetectado = {
 
 export default function NuevoEvento() {
   const navigate = useNavigate();
+  const [parametros] = useSearchParams();
+  const idEditando = parametros.get('editar');
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [modo, setModo] = useState<'manual' | 'foto'>('manual');
+  const [cargandoEdicion, setCargandoEdicion] = useState(!!idEditando);
 
   // Formulario manual
   const [titulo, setTitulo] = useState('');
@@ -34,6 +37,25 @@ export default function NuevoEvento() {
       .select('*')
       .then(({ data }) => setCategorias(data ?? []));
   }, []);
+
+  useEffect(() => {
+    if (!idEditando) return;
+    supabase
+      .from('eventos')
+      .select('*')
+      .eq('id', idEditando)
+      .single()
+      .then(({ data }) => {
+        if (data) {
+          setTitulo(data.titulo);
+          setDescripcion(data.descripcion ?? '');
+          setFecha(data.fecha);
+          setTipo(data.tipo);
+          setCategoriaId(data.categoria_id ?? '');
+        }
+        setCargandoEdicion(false);
+      });
+  }, [idEditando]);
 
   const [errorGuardar, setErrorGuardar] = useState<string | null>(null);
   const [guardando, setGuardando] = useState(false);
@@ -61,15 +83,17 @@ export default function NuevoEvento() {
       return;
     }
 
-    const { error: errorInsertar } = await supabase.from('eventos').insert({
-      user_id: user.id,
+    const datos = {
       titulo,
       descripcion: descripcion || null,
       fecha,
       tipo,
-      categoria_id: categoriaId || null,
-      origen: 'manual'
-    });
+      categoria_id: categoriaId || null
+    };
+
+    const { error: errorInsertar } = idEditando
+      ? await supabase.from('eventos').update(datos).eq('id', idEditando)
+      : await supabase.from('eventos').insert({ ...datos, user_id: user.id, origen: 'manual' });
 
     setGuardando(false);
 
@@ -78,6 +102,14 @@ export default function NuevoEvento() {
       return;
     }
 
+    navigate('/');
+  }
+
+  async function eliminarEvento() {
+    if (!idEditando) return;
+    if (!window.confirm('¿Eliminar esta fecha? No se puede deshacer.')) return;
+    setGuardando(true);
+    await supabase.from('eventos').delete().eq('id', idEditando);
     navigate('/');
   }
 
@@ -146,8 +178,11 @@ export default function NuevoEvento() {
 
   return (
     <div className="min-h-screen bg-paper px-6 pt-8 pb-24">
-      <h1 className="font-display text-3xl text-ink mb-4">Nueva fecha</h1>
+      <h1 className="font-display text-3xl text-ink mb-4">{idEditando ? 'Editar fecha' : 'Nueva fecha'}</h1>
 
+      {cargandoEdicion ? (
+        <p className="font-body text-ink/50">Cargando…</p>
+      ) : (
       <div className="flex gap-2 mb-6">
         <button
           onClick={() => setModo('manual')}
@@ -155,12 +190,14 @@ export default function NuevoEvento() {
         >
           Manual
         </button>
-        <button
-          onClick={() => setModo('foto')}
-          className={`flex-1 font-mono text-xs uppercase py-2 rounded ${modo === 'foto' ? 'bg-ink text-paper' : 'bg-white text-ink/50'}`}
-        >
-          Desde una foto
-        </button>
+        {!idEditando && (
+          <button
+            onClick={() => setModo('foto')}
+            className={`flex-1 font-mono text-xs uppercase py-2 rounded ${modo === 'foto' ? 'bg-ink text-paper' : 'bg-white text-ink/50'}`}
+          >
+            Desde una foto
+          </button>
+        )}
       </div>
 
       {modo === 'manual' && (
@@ -246,13 +283,23 @@ export default function NuevoEvento() {
             disabled={guardando}
             className="w-full bg-teal text-white rounded py-3 font-medium disabled:opacity-50"
           >
-            {guardando ? 'Guardando…' : 'Guardar'}
+            {guardando ? 'Guardando…' : idEditando ? 'Guardar cambios' : 'Guardar'}
           </button>
+          {idEditando && (
+            <button
+              type="button"
+              onClick={eliminarEvento}
+              disabled={guardando}
+              className="w-full font-mono text-xs uppercase text-crimson py-2"
+            >
+              Eliminar esta fecha
+            </button>
+          )}
           {errorGuardar && <p className="font-body text-sm text-crimson">{errorGuardar}</p>}
         </form>
       )}
 
-      {modo === 'foto' && (
+      {modo === 'foto' && !idEditando && (
         <div className="space-y-4">
           <div className="bg-white rounded-lg p-4 shadow-sm">
             <label className="font-mono text-xs uppercase tracking-wide text-ink/50 block mb-1">
@@ -309,6 +356,8 @@ export default function NuevoEvento() {
             </div>
           )}
         </div>
+      )}
+      </div>
       )}
     </div>
   );
