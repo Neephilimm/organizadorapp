@@ -171,12 +171,13 @@ export default function Dashboard() {
           const puedeCompletarse = ev.origen !== 'canvas';
           const abierto = expandido === ev.id;
           const etiquetaTipo = ev.origen === 'canvas' ? ev.tipo : ETIQUETAS_TIPO[ev.tipo] ?? ev.tipo;
+          const esLibre = ev.tipo === 'feriado' || ev.tipo === 'sin_clases';
 
           return (
             <div
               key={ev.id}
-              className="bg-white rounded-lg p-4 shadow-sm border-l-4"
-              style={{ borderColor: ev.origen === 'canvas' ? '#D6A419' : colorCategoria(ev.categoria_id) }}
+              className={`rounded-lg p-4 shadow-sm border-l-4 ${esLibre ? 'bg-teal/5' : 'bg-white'}`}
+              style={{ borderColor: esLibre ? '#3E7C7C' : ev.origen === 'canvas' ? '#D6A419' : colorCategoria(ev.categoria_id) }}
             >
               <div className="flex items-start gap-3">
                 {puedeCompletarse && (
@@ -194,7 +195,7 @@ export default function Dashboard() {
                 >
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className="font-mono text-xs uppercase tracking-wide text-ink/50">
-                      {etiquetaTipo}
+                      {esLibre ? '🎉 ' : ''}{etiquetaTipo}
                     </span>
                     {ev.cursoNombre && (
                       <span className="font-mono text-[10px] text-amber">· {ev.cursoNombre}</span>
