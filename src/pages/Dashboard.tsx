@@ -118,6 +118,14 @@ export default function Dashboard() {
     return categorias.find(c => c.id === categoriaId)?.nombre ?? null;
   }
 
+  function seccionDe(dias: number): string {
+    if (dias <= 0) return 'Hoy';
+    if (dias === 1) return 'Mañana';
+    if (dias <= 7) return 'Esta semana';
+    if (dias <= 30) return 'Este mes';
+    return 'Más adelante';
+  }
+
   if (cargando) {
     return <div className="p-6 font-body text-ink/60">Cargando tu semestre…</div>;
   }
@@ -133,6 +141,14 @@ export default function Dashboard() {
     );
   }
 
+  const secciones: Record<string, EventoUnificado[]> = {};
+  for (const ev of eventos) {
+    const dias = differenceInCalendarDays(parseISO(ev.fecha), new Date());
+    const nombre = seccionDe(dias);
+    (secciones[nombre] ??= []).push(ev);
+  }
+  const ordenSecciones = ['Hoy', 'Mañana', 'Esta semana', 'Este mes', 'Más adelante'];
+
   return (
     <div className="min-h-screen bg-paper">
       <header className="px-6 pt-8 pb-4">
@@ -140,8 +156,16 @@ export default function Dashboard() {
         <h1 className="font-display text-3xl text-ink">Tu semestre</h1>
       </header>
 
-      <div className="px-6 pb-24 space-y-3">
-        {eventos.map(ev => {
+      <div className="px-6 pb-24">
+        {ordenSecciones
+          .filter(nombre => secciones[nombre]?.length)
+          .map(nombreSeccion => (
+            <div key={nombreSeccion} className="mb-6">
+              <h2 className="font-mono text-xs uppercase tracking-widest text-ink/40 mb-2">
+                {nombreSeccion}
+              </h2>
+              <div className="space-y-3">
+                {secciones[nombreSeccion].map(ev => {
           const dias = differenceInCalendarDays(parseISO(ev.fecha), new Date());
           const urgente = dias <= 3;
           const puedeCompletarse = ev.origen !== 'canvas';
@@ -235,8 +259,11 @@ export default function Dashboard() {
                 </div>
               )}
             </div>
-          );
-        })}
+                  );
+                })}
+              </div>
+            </div>
+          ))}
       </div>
     </div>
   );
