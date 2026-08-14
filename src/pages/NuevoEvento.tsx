@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { supabase, Categoria, TipoEvento } from '../lib/supabase';
+import { programarRecordatorio, cancelarRecordatorio, pedirPermisoNotificaciones } from '../lib/notificaciones';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 type EventoDetectado = {
@@ -36,6 +37,7 @@ export default function NuevoEvento() {
       .from('categorias')
       .select('*')
       .then(({ data }) => setCategorias(data ?? []));
+    pedirPermisoNotificaciones();
   }, []);
 
   useEffect(() => {
@@ -91,15 +93,24 @@ export default function NuevoEvento() {
       categoria_id: categoriaId || null
     };
 
-    const { error: errorInsertar } = idEditando
-      ? await supabase.from('eventos').update(datos).eq('id', idEditando)
-      : await supabase.from('eventos').insert({ ...datos, user_id: user.id, origen: 'manual' });
+    const { data: filaGuardada, error: errorInsertar } = idEditando
+      ? await supabase.from('eventos').update(datos).eq('id', idEditando).select().single()
+      : await supabase
+          .from('eventos')
+          .insert({ ...datos, user_id: user.id, origen: 'manual' })
+          .select()
+          .single();
 
     setGuardando(false);
 
     if (errorInsertar) {
       setErrorGuardar(`No se pudo guardar: ${errorInsertar.message}`);
       return;
+    }
+
+    if (filaGuardada) {
+      if (idEditando) await cancelarRecordatorio(idEditando);
+      await programarRecordatorio(filaGuardada);
     }
 
     navigate('/');
@@ -110,6 +121,7 @@ export default function NuevoEvento() {
     if (!window.confirm('¿Eliminar esta fecha? No se puede deshacer.')) return;
     setGuardando(true);
     await supabase.from('eventos').delete().eq('id', idEditando);
+    await cancelarRecordatorio(idEditando);
     navigate('/');
   }
 
@@ -172,7 +184,10 @@ export default function NuevoEvento() {
       origen: 'imagen' as const
     }));
 
-    await supabase.from('eventos').insert(filas);
+    const { data: filasGuardadas } = await supabase.from('eventos').insert(filas).select();
+    for (const fila of filasGuardadas ?? []) {
+      await programarRecordatorio(fila);
+    }
     navigate('/');
   }
 
