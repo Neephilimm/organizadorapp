@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase, Evento, Categoria } from '../lib/supabase';
+import { cancelarRecordatorio } from '../lib/notificaciones';
 import { format, differenceInCalendarDays, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -113,6 +114,7 @@ export default function Dashboard() {
   async function marcarCompletado(id: string) {
     setCompletando(id);
     await supabase.from('eventos').update({ completado: true }).eq('id', id);
+    await cancelarRecordatorio(id);
     setEventos(prev => prev.filter(e => e.id !== id));
     setCompletando(null);
   }
