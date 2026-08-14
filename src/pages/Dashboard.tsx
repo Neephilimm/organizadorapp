@@ -45,6 +45,8 @@ export default function Dashboard() {
   const [cargando, setCargando] = useState(true);
   const [completando, setCompletando] = useState<string | null>(null);
   const [expandido, setExpandido] = useState<string | null>(null);
+  const [busqueda, setBusqueda] = useState('');
+  const [filtroCategoria, setFiltroCategoria] = useState('');
 
   useEffect(() => {
     cargarDatos();
@@ -156,8 +158,17 @@ export default function Dashboard() {
     );
   }
 
+  const textoBusqueda = busqueda.trim().toLowerCase();
+  const eventosFiltrados = eventos.filter(ev => {
+    const coincideTexto = !textoBusqueda || ev.titulo.toLowerCase().includes(textoBusqueda);
+    const coincideCategoria =
+      !filtroCategoria ||
+      (filtroCategoria === '__sin_categoria__' ? !ev.categoria_id : ev.categoria_id === filtroCategoria);
+    return coincideTexto && coincideCategoria;
+  });
+
   const secciones: Record<string, EventoUnificado[]> = {};
-  for (const ev of eventos) {
+  for (const ev of eventosFiltrados) {
     const dias = differenceInCalendarDays(parseISO(ev.fecha), new Date());
     const nombre = seccionDe(dias);
     (secciones[nombre] ??= []).push(ev);
@@ -170,6 +181,38 @@ export default function Dashboard() {
         <p className="font-mono text-xs tracking-widest text-ink/50 uppercase">Próximas fechas</p>
         <h1 className="font-display text-3xl text-ink">Tu semestre</h1>
       </header>
+
+      {(categorias.length > 0 || eventos.length > 5) && (
+        <div className="px-6 pb-4 flex gap-2">
+          <input
+            value={busqueda}
+            onChange={e => setBusqueda(e.target.value)}
+            placeholder="Buscar por título…"
+            className="flex-1 font-body text-sm border border-ink/10 rounded px-3 py-2 bg-white"
+          />
+          {categorias.length > 0 && (
+            <select
+              value={filtroCategoria}
+              onChange={e => setFiltroCategoria(e.target.value)}
+              className="font-body text-sm border border-ink/10 rounded px-2 py-2 bg-white max-w-[40%]"
+            >
+              <option value="">Todas</option>
+              <option value="__sin_categoria__">Sin categoría</option>
+              {categorias.map(c => (
+                <option key={c.id} value={c.id}>
+                  {c.nombre}
+                </option>
+              ))}
+            </select>
+          )}
+        </div>
+      )}
+
+      {eventosFiltrados.length === 0 && (
+        <p className="px-6 font-body text-sm text-ink/40">
+          Ninguna fecha coincide con ese filtro.
+        </p>
+      )}
 
       <div className="px-6 pb-24">
         {ordenSecciones
