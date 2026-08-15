@@ -28,6 +28,8 @@ type EventoUnificado = {
   cursoNombre?: string;
   cursoId?: number;
   discussionTopicId?: number;
+  assignmentId?: number;
+  entregada?: boolean;
 };
 
 const CLAVE_OCULTOS = 'canvas-dashboard-ocultos';
@@ -53,6 +55,8 @@ export default function Dashboard() {
   const [textoRespuesta, setTextoRespuesta] = useState('');
   const [enviandoRespuesta, setEnviandoRespuesta] = useState(false);
   const [respuestaEnviada, setRespuestaEnviada] = useState<string | null>(null);
+  const [entregando, setEntregando] = useState<string | null>(null);
+  const [entregaEnviada, setEntregaEnviada] = useState<string | null>(null);
 
   useEffect(() => {
     cargarDatos();
@@ -110,7 +114,9 @@ export default function Dashboard() {
           url: t.url,
           cursoNombre: t.curso,
           cursoId: t.cursoId,
-          discussionTopicId: t.discussionTopicId ?? undefined
+          discussionTopicId: t.discussionTopicId ?? undefined,
+          assignmentId: t.assignmentId,
+          entregada: t.entregada
         }))
         .filter(t => !ocultos.includes(t.id));
       unificados = [...unificados, ...tareasCanvas].sort((a, b) => a.fecha.localeCompare(b.fecha));
@@ -148,6 +154,35 @@ export default function Dashboard() {
       setRespondiendo(null);
     } else {
       alert(data?.error ?? 'No se pudo enviar la respuesta.');
+    }
+  }
+
+  async function entregarArchivo(ev: EventoUnificado, archivo: File) {
+    if (!ev.cursoId || !ev.assignmentId) return;
+    setEntregando(ev.id);
+
+    const base64 = await new Promise<string>((resolve, reject) => {
+      const lector = new FileReader();
+      lector.onloadend = () => resolve((lector.result as string).split(',')[1] ?? '');
+      lector.onerror = reject;
+      lector.readAsDataURL(archivo);
+    });
+
+    const { data } = await supabase.functions.invoke('canvas-entregar-archivo', {
+      body: {
+        cursoId: ev.cursoId,
+        assignmentId: ev.assignmentId,
+        nombreArchivo: archivo.name,
+        contentType: archivo.type || 'application/octet-stream',
+        archivoBase64: base64
+      }
+    });
+
+    setEntregando(null);
+    if (data?.ok) {
+      setEntregaEnviada(ev.id);
+    } else {
+      alert(data?.error ?? 'No se pudo entregar el archivo.');
     }
   }
 
@@ -358,6 +393,27 @@ export default function Dashboard() {
                       <span className="font-mono text-xs uppercase text-teal">✓ Enviado</span>
                     )}
                   </div>
+
+                  {ev.tipo === 'Entrega de archivo' && ev.assignmentId && (
+                    <div className="mt-3">
+                      {entregaEnviada === ev.id || ev.entregada ? (
+                        <span className="font-mono text-xs uppercase text-teal">✓ Entregado</span>
+                      ) : (
+                        <label className="inline-block bg-teal text-white rounded px-4 py-2 font-mono text-xs uppercase cursor-pointer">
+                          {entregando === ev.id ? 'Entregando…' : 'Elegir y entregar archivo'}
+                          <input
+                            type="file"
+                            className="hidden"
+                            disabled={entregando === ev.id}
+                            onChange={e => {
+                              const archivo = e.target.files?.[0];
+                              if (archivo) entregarArchivo(ev, archivo);
+                            }}
+                          />
+                        </label>
+                      )}
+                    </div>
+                  )}
 
                   {respondiendo === ev.id && (
                     <div className="mt-3">
