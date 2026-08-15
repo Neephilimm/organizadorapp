@@ -26,6 +26,8 @@ type EventoUnificado = {
   categoria_id: string | null;
   url?: string;
   cursoNombre?: string;
+  cursoId?: number;
+  discussionTopicId?: number;
 };
 
 const CLAVE_OCULTOS = 'canvas-dashboard-ocultos';
@@ -47,6 +49,10 @@ export default function Dashboard() {
   const [expandido, setExpandido] = useState<string | null>(null);
   const [busqueda, setBusqueda] = useState('');
   const [filtroCategoria, setFiltroCategoria] = useState('');
+  const [respondiendo, setRespondiendo] = useState<string | null>(null);
+  const [textoRespuesta, setTextoRespuesta] = useState('');
+  const [enviandoRespuesta, setEnviandoRespuesta] = useState(false);
+  const [respuestaEnviada, setRespuestaEnviada] = useState<string | null>(null);
 
   useEffect(() => {
     cargarDatos();
@@ -102,7 +108,9 @@ export default function Dashboard() {
           origen: 'canvas' as const,
           categoria_id: null,
           url: t.url,
-          cursoNombre: t.curso
+          cursoNombre: t.curso,
+          cursoId: t.cursoId,
+          discussionTopicId: t.discussionTopicId ?? undefined
         }))
         .filter(t => !ocultos.includes(t.id));
       unificados = [...unificados, ...tareasCanvas].sort((a, b) => a.fecha.localeCompare(b.fecha));
@@ -125,6 +133,22 @@ export default function Dashboard() {
     const ocultos = leerOcultos();
     localStorage.setItem(CLAVE_OCULTOS, JSON.stringify([...ocultos, id]));
     setEventos(prev => prev.filter(e => e.id !== id));
+  }
+
+  async function enviarRespuesta(ev: EventoUnificado) {
+    if (!textoRespuesta.trim() || !ev.cursoId || !ev.discussionTopicId) return;
+    setEnviandoRespuesta(true);
+    const { data } = await supabase.functions.invoke('canvas-responder-foro', {
+      body: { cursoId: ev.cursoId, discussionTopicId: ev.discussionTopicId, mensaje: textoRespuesta }
+    });
+    setEnviandoRespuesta(false);
+    if (data?.ok) {
+      setRespuestaEnviada(ev.id);
+      setTextoRespuesta('');
+      setRespondiendo(null);
+    } else {
+      alert(data?.error ?? 'No se pudo enviar la respuesta.');
+    }
   }
 
   function colorCategoria(categoriaId: string | null) {
@@ -322,7 +346,37 @@ export default function Dashboard() {
                         Editar
                       </Link>
                     )}
+                    {ev.tipo === 'Foro' && ev.discussionTopicId && respuestaEnviada !== ev.id && (
+                      <button
+                        onClick={() => setRespondiendo(respondiendo === ev.id ? null : ev.id)}
+                        className="font-mono text-xs uppercase text-ink/50"
+                      >
+                        Responder
+                      </button>
+                    )}
+                    {respuestaEnviada === ev.id && (
+                      <span className="font-mono text-xs uppercase text-teal">✓ Enviado</span>
+                    )}
                   </div>
+
+                  {respondiendo === ev.id && (
+                    <div className="mt-3">
+                      <textarea
+                        value={textoRespuesta}
+                        onChange={e => setTextoRespuesta(e.target.value)}
+                        placeholder="Escribe tu respuesta para el foro…"
+                        rows={3}
+                        className="w-full font-body text-sm border border-ink/10 rounded px-3 py-2"
+                      />
+                      <button
+                        onClick={() => enviarRespuesta(ev)}
+                        disabled={enviandoRespuesta || !textoRespuesta.trim()}
+                        className="mt-2 bg-teal text-white rounded px-4 py-2 font-mono text-xs uppercase disabled:opacity-50"
+                      >
+                        {enviandoRespuesta ? 'Enviando…' : 'Publicar en Canvas'}
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
