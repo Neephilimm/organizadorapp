@@ -142,11 +142,13 @@ serve(withCors(async req => {
       .map((e: any) => ({
         titulo: e.title,
         curso: e.context_name,
+        cursoId: e.assignment.course_id,
         fecha: e.assignment.due_at,
         url: e.html_url,
         tipo: tipoDeTarea(e.assignment),
         descripcion: (e.assignment.description ?? '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 600),
-        entregada: !!e.assignment.has_submitted_submissions
+        entregada: !!e.assignment.has_submitted_submissions,
+        discussionTopicId: e.assignment.discussion_topic?.id ?? null
       }));
 
     return new Response(JSON.stringify({ ok: true, tareas, archivos, calificaciones, anuncios }), {
@@ -156,5 +158,6 @@ serve(withCors(async req => {
     return new Response(JSON.stringify({ ok: false, error: String(e) }), { status: 500 });
   }
 }));
+
 
 
