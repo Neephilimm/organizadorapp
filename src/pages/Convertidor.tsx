@@ -64,6 +64,8 @@ export default function Convertidor() {
   // Imagen
   const inputImagen = useRef<HTMLInputElement>(null);
   const [svgResultado, setSvgResultado] = useState<string | null>(null);
+  const [procesandoImagen, setProcesandoImagen] = useState(false);
+  const [errorImagen, setErrorImagen] = useState<string | null>(null);
   const canvasRasterRef = useRef<HTMLCanvasElement | null>(null);
 
   async function convertirVideo() {
@@ -72,27 +74,32 @@ export default function Convertidor() {
     setResultadoBlob(null);
     setProgreso('Cargando motor de conversión (una vez, ~30 MB)…');
 
-    await asegurarFFmpeg(m => setProgreso(m));
+    try {
+      await asegurarFFmpeg(m => setProgreso(m));
 
-    const nombreEntrada = archivoVideo.name;
-    const nombreSalida = `salida.${formatoDestino}`;
+      const nombreEntrada = archivoVideo.name;
+      const nombreSalida = `salida.${formatoDestino}`;
 
-    await ffmpeg.writeFile(nombreEntrada, await fetchFile(archivoVideo));
+      await ffmpeg.writeFile(nombreEntrada, await fetchFile(archivoVideo));
 
-    setProgreso('Convirtiendo…');
-    const esSoloAudio = (FORMATOS_AUDIO as readonly string[]).includes(formatoDestino);
+      setProgreso('Convirtiendo…');
+      const esSoloAudio = (FORMATOS_AUDIO as readonly string[]).includes(formatoDestino);
 
-    const args = esSoloAudio
-      ? ['-i', nombreEntrada, '-vn', nombreSalida]
-      : ['-i', nombreEntrada, nombreSalida];
+      const args = esSoloAudio
+        ? ['-i', nombreEntrada, '-vn', nombreSalida]
+        : ['-i', nombreEntrada, nombreSalida];
 
-    await ffmpeg.exec(args);
+      await ffmpeg.exec(args);
 
-    const data = await ffmpeg.readFile(nombreSalida);
-    const blob = new Blob([data], { type: esSoloAudio ? `audio/${formatoDestino}` : `video/${formatoDestino}` });
-    setResultadoBlob(blob);
-    setProgreso('¡Listo!');
-    setProcesando(false);
+      const data = await ffmpeg.readFile(nombreSalida);
+      const blob = new Blob([data], { type: esSoloAudio ? `audio/${formatoDestino}` : `video/${formatoDestino}` });
+      setResultadoBlob(blob);
+      setProgreso('¡Listo!');
+    } catch (e) {
+      setProgreso(`Error: no se pudo convertir el archivo (${String(e)}).`);
+    } finally {
+      setProcesando(false);
+    }
   }
 
   async function descargarResultado() {
@@ -106,18 +113,34 @@ export default function Convertidor() {
     const archivo = e.target.files?.[0];
     if (!archivo) return;
 
+    setErrorImagen(null);
+    setSvgResultado(null);
+    setProcesandoImagen(true);
+
     const url = URL.createObjectURL(archivo);
     const img = new Image();
     img.onload = () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = img.width;
-      canvas.height = img.height;
-      const ctx = canvas.getContext('2d')!;
-      ctx.drawImage(img, 0, 0);
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const svg = ImageTracer.imagedataToSVG(imageData, { ltres: 1, qtres: 1, scale: 1 });
-      setSvgResultado(svg);
-      canvasRasterRef.current = canvas;
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext('2d')!;
+        ctx.drawImage(img, 0, 0);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const svg = ImageTracer.imagedataToSVG(imageData, { ltres: 1, qtres: 1, scale: 1 });
+        setSvgResultado(svg);
+        canvasRasterRef.current = canvas;
+      } catch (err) {
+        setErrorImagen(`No se pudo procesar la imagen (${String(err)}).`);
+      } finally {
+        setProcesandoImagen(false);
+        URL.revokeObjectURL(url);
+      }
+    };
+    img.onerror = () => {
+      setErrorImagen('No se pudo leer esa imagen. Prueba con otro archivo.');
+      setProcesandoImagen(false);
+      URL.revokeObjectURL(url);
     };
     img.src = url;
   }
@@ -226,6 +249,8 @@ export default function Convertidor() {
             onChange={convertirImagenASVG}
             className="w-full font-body text-sm"
           />
+          {procesandoImagen && <p className="font-mono text-xs text-ink/50">Procesando imagen…</p>}
+          {errorImagen && <p className="font-body text-sm text-crimson">{errorImagen}</p>}
           {svgResultado && (
             <>
               <div
@@ -258,3 +283,4 @@ export default function Convertidor() {
     </div>
   );
 }
+
