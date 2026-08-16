@@ -9,6 +9,7 @@ type ArchivoHub = {
   tipo_archivo: string;
   preview?: string | null;
   url_externa?: string | null;
+  url_directa?: string | null;
   storage_path?: string | null;
   modificado?: string;
   compartido_por?: string | null;
@@ -31,6 +32,7 @@ export default function Hub() {
   const [subiendo, setSubiendo] = useState(false);
   const [abriendo, setAbriendo] = useState<string | null>(null);
   const [eliminando, setEliminando] = useState<string | null>(null);
+  const [copiado, setCopiado] = useState<string | null>(null);
   const inputArchivo = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -160,6 +162,14 @@ export default function Hub() {
     setAbriendo(null);
   }
 
+  async function copiarLink(a: ArchivoHub) {
+    const link = a.url_directa ?? a.url_externa;
+    if (!link) return;
+    await navigator.clipboard.writeText(link);
+    setCopiado(a.nombre);
+    setTimeout(() => setCopiado(null), 1500);
+  }
+
   async function eliminarArchivo(a: ArchivoHub) {
     if (a.plataforma !== 'supabase' || !a.storage_path) return;
     if (!window.confirm(`¿Eliminar "${a.nombre}"? No se puede deshacer.`)) return;
@@ -274,6 +284,16 @@ export default function Hub() {
               )}
             </div>
             </button>
+
+            {a.plataforma === 'dropbox' && (a.url_directa || a.url_externa) && (
+              <button
+                onClick={() => copiarLink(a)}
+                aria-label="Copiar link"
+                className="shrink-0 font-mono text-[10px] uppercase text-teal border border-teal/30 rounded px-2 py-1"
+              >
+                {copiado === a.nombre ? '✓ Copiado' : 'Copiar link'}
+              </button>
+            )}
 
             {a.plataforma === 'supabase' && (
               <button
