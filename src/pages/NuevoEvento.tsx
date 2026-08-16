@@ -31,6 +31,7 @@ export default function NuevoEvento() {
   const [detectados, setDetectados] = useState<EventoDetectado[]>([]);
   const [categoriaFoto, setCategoriaFoto] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
+  const [guardandoDetectados, setGuardandoDetectados] = useState(false);
 
   useEffect(() => {
     supabase
@@ -169,10 +170,17 @@ export default function NuevoEvento() {
   }
 
   async function confirmarDetectados() {
+    setError(null);
+    setGuardandoDetectados(true);
+
     const {
       data: { user }
     } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) {
+      setError('No hay sesión activa.');
+      setGuardandoDetectados(false);
+      return;
+    }
 
     const filas = detectados.map(ev => ({
       user_id: user.id,
@@ -184,7 +192,18 @@ export default function NuevoEvento() {
       origen: 'imagen' as const
     }));
 
-    const { data: filasGuardadas } = await supabase.from('eventos').insert(filas).select();
+    const { data: filasGuardadas, error: errorInsertar } = await supabase
+      .from('eventos')
+      .insert(filas)
+      .select();
+
+    setGuardandoDetectados(false);
+
+    if (errorInsertar) {
+      setError(`No se pudieron guardar las fechas: ${errorInsertar.message}`);
+      return;
+    }
+
     for (const fila of filasGuardadas ?? []) {
       await programarRecordatorio(fila);
     }
@@ -365,10 +384,12 @@ export default function NuevoEvento() {
               ))}
               <button
                 onClick={confirmarDetectados}
-                className="w-full bg-teal text-white rounded py-2 font-medium mt-2"
+                disabled={guardandoDetectados}
+                className="w-full bg-teal text-white rounded py-2 font-medium mt-2 disabled:opacity-50"
               >
-                Confirmar y guardar todas
+                {guardandoDetectados ? 'Guardando…' : 'Confirmar y guardar todas'}
               </button>
+              {error && <p className="font-body text-sm text-crimson mt-2">{error}</p>}
             </div>
           )}
         </div>
