@@ -10,7 +10,7 @@ function idNumerico(eventoId: string): number {
   return Math.abs(hash) % 2147483647;
 }
 
-const DIAS_DE_AVISO: Record<string, number> = {
+export const DIAS_DE_AVISO_POR_DEFECTO: Record<string, number> = {
   evaluacion: 3,
   entrega: 2,
   presentacion: 3,
@@ -18,6 +18,20 @@ const DIAS_DE_AVISO: Record<string, number> = {
   tarea: 1,
   otro: 1
 };
+
+const CLAVE_CONFIG_AVISOS = 'dias-aviso-config';
+
+export function leerConfigAvisos(): Record<string, number> {
+  try {
+    return { ...DIAS_DE_AVISO_POR_DEFECTO, ...JSON.parse(localStorage.getItem(CLAVE_CONFIG_AVISOS) ?? '{}') };
+  } catch {
+    return { ...DIAS_DE_AVISO_POR_DEFECTO };
+  }
+}
+
+export function guardarConfigAvisos(config: Record<string, number>) {
+  localStorage.setItem(CLAVE_CONFIG_AVISOS, JSON.stringify(config));
+}
 
 export async function pedirPermisoNotificaciones() {
   try {
@@ -33,7 +47,7 @@ export async function programarRecordatorio(evento: {
   fecha: string;
   tipo: string;
 }) {
-  const diasAntes = DIAS_DE_AVISO[evento.tipo];
+  const diasAntes = leerConfigAvisos()[evento.tipo];
   if (!diasAntes) return; // feriados/sin_clases no necesitan recordatorio
 
   const fechaEvento = new Date(`${evento.fecha}T09:00:00`);
