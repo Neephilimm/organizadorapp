@@ -66,3 +66,67 @@ export async function cancelarRecordatorio(eventoId: string) {
     // no-op
   }
 }
+
+// --- Aviso de contenido nuevo de Canvas (no es push real: se dispara cuando
+// abres la sección Canvas y detecta algo que no habías visto antes) ---
+
+let contadorNotificacion = 900000000;
+
+export async function notificarAhora(titulo: string, cuerpo: string) {
+  try {
+    contadorNotificacion += 1;
+    await LocalNotifications.schedule({
+      notifications: [
+        {
+          id: contadorNotificacion,
+          title: titulo,
+          body: cuerpo,
+          schedule: { at: new Date(Date.now() + 500) }
+        }
+      ]
+    });
+  } catch {
+    // no-op
+  }
+}
+
+function leerVistos(clave: string): Set<string> {
+  try {
+    return new Set(JSON.parse(localStorage.getItem(clave) ?? '[]'));
+  } catch {
+    return new Set();
+  }
+}
+
+function guardarVistos(clave: string, ids: Set<string>) {
+  // Solo guarda los últimos 300 para que no crezca sin límite.
+  localStorage.setItem(clave, JSON.stringify(Array.from(ids).slice(-300)));
+}
+
+/**
+ * Compara una lista de items de Canvas (anuncios, archivos, etc.) contra los
+ * que ya se habían visto, avisa por los nuevos, y actualiza el registro.
+ * `idDeItem` debe devolver algo estable (ej: curso + título).
+ */
+export async function avisarNovedadesCanvas<T>(
+  clave: string,
+  items: T[],
+  idDeItem: (item: T) => string,
+  mensajeDeItem: (item: T) => { titulo: string; cuerpo: string }
+) {
+  const vistos = leerVistos(clave);
+  const esPrimeraVez = vistos.size === 0;
+  const nuevos = items.filter(item => !vistos.has(idDeItem(item)));
+
+  for (const item of items) vistos.add(idDeItem(item));
+  guardarVistos(clave, vistos);
+
+  // La primera vez que se sincroniza no avisa de nada (si no, avisaría de
+  // TODO el historial de una), solo a partir de la segunda visita.
+  if (esPrimeraVez || nuevos.length === 0) return;
+
+  for (const item of nuevos.slice(0, 5)) {
+    const { titulo, cuerpo } = mensajeDeItem(item);
+    await notificarAhora(titulo, cuerpo);
+  }
+}
