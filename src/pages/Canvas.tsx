@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { avisarNovedadesCanvas } from '../lib/notificaciones';
 
 type Tarea = { titulo: string; curso: string; fecha: string; url: string };
 type ArchivoCanvas = { nombre: string; curso: string; url: string; actualizado: string; tipo: string };
@@ -48,6 +49,19 @@ export default function Canvas() {
     setCalificaciones(data.calificaciones ?? []);
     setAnuncios(data.anuncios ?? []);
     setCargando(false);
+
+    avisarNovedadesCanvas(
+      'canvas-anuncios-vistos',
+      data.anuncios ?? [],
+      (a: Anuncio) => `${a.curso}::${a.titulo}::${a.fecha}`,
+      (a: Anuncio) => ({ titulo: `Nuevo anuncio · ${a.curso}`, cuerpo: a.titulo })
+    );
+    avisarNovedadesCanvas(
+      'canvas-archivos-vistos',
+      data.archivos ?? [],
+      (a: ArchivoCanvas) => `${a.curso}::${a.nombre}`,
+      (a: ArchivoCanvas) => ({ titulo: `Nuevo archivo · ${a.curso}`, cuerpo: a.nombre })
+    );
   }
 
   async function desconectar() {
