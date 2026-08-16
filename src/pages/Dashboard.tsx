@@ -30,6 +30,7 @@ type EventoUnificado = {
   discussionTopicId?: number;
   assignmentId?: number;
   entregada?: boolean;
+  tiposPermitidos?: string[];
 };
 
 const CLAVE_OCULTOS = 'canvas-dashboard-ocultos';
@@ -116,7 +117,8 @@ export default function Dashboard() {
           cursoId: t.cursoId,
           discussionTopicId: t.discussionTopicId ?? undefined,
           assignmentId: t.assignmentId,
-          entregada: t.entregada
+          entregada: t.entregada,
+          tiposPermitidos: t.tiposDeArchivoPermitidos
         }))
         .filter(t => !ocultos.includes(t.id));
       unificados = [...unificados, ...tareasCanvas].sort((a, b) => a.fecha.localeCompare(b.fecha));
@@ -159,6 +161,17 @@ export default function Dashboard() {
 
   async function entregarArchivo(ev: EventoUnificado, archivo: File) {
     if (!ev.cursoId || !ev.assignmentId) return;
+
+    if (ev.tiposPermitidos && ev.tiposPermitidos.length > 0) {
+      const extension = archivo.name.split('.').pop()?.toLowerCase() ?? '';
+      if (!ev.tiposPermitidos.map(t => t.toLowerCase()).includes(extension)) {
+        alert(
+          `Este archivo es .${extension}, pero la tarea solo acepta: ${ev.tiposPermitidos.join(', ')}`
+        );
+        return;
+      }
+    }
+
     setEntregando(ev.id);
 
     const base64 = await new Promise<string>((resolve, reject) => {
@@ -400,7 +413,11 @@ export default function Dashboard() {
                         <span className="font-mono text-xs uppercase text-teal">✓ Entregado</span>
                       ) : (
                         <label className="inline-block bg-teal text-white rounded px-4 py-2 font-mono text-xs uppercase cursor-pointer">
-                          {entregando === ev.id ? 'Entregando…' : 'Elegir y entregar archivo'}
+                          {entregando === ev.id
+                            ? 'Entregando…'
+                            : ev.tiposPermitidos && ev.tiposPermitidos.length > 0
+                            ? `Entregar (${ev.tiposPermitidos.join(', ')})`
+                            : 'Elegir y entregar archivo'}
                           <input
                             type="file"
                             className="hidden"
