@@ -39,7 +39,7 @@ serve(withCors(async req => {
   try {
     const authHeader = req.headers.get('Authorization');
     if (!authHeader) {
-      return new Response(JSON.stringify({ ok: false, error: 'No autenticado.' }), { status: 401 });
+      return new Response(JSON.stringify({ ok: false, error: 'No autenticado.' }), { status: 200 });
     }
 
     // Cliente con el JWT del usuario para saber quién es
@@ -51,7 +51,7 @@ serve(withCors(async req => {
     } = await supabaseUser.auth.getUser();
 
     if (!user) {
-      return new Response(JSON.stringify({ ok: false, error: 'Usuario no válido.' }), { status: 401 });
+      return new Response(JSON.stringify({ ok: false, error: 'Usuario no válido.' }), { status: 200 });
     }
 
     const { code } = await req.json();
@@ -72,7 +72,7 @@ serve(withCors(async req => {
 
     const tokenData = await tokenRes.json();
     if (!tokenRes.ok) {
-      return new Response(JSON.stringify({ ok: false, error: tokenData }), { status: 400 });
+      return new Response(JSON.stringify({ ok: false, error: JSON.stringify(tokenData) }), { status: 200 });
     }
 
     // Cliente con service role para escribir en la tabla del usuario
@@ -91,6 +91,6 @@ serve(withCors(async req => {
       headers: { 'Content-Type': 'application/json' }
     });
   } catch (e) {
-    return new Response(JSON.stringify({ ok: false, error: String(e) }), { status: 500 });
+    return new Response(JSON.stringify({ ok: false, error: String(e) }), { status: 200 });
   }
 }));
