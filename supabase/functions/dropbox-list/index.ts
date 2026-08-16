@@ -39,7 +39,7 @@ serve(withCors(async req => {
     const {
       data: { user }
     } = await supabaseUser.auth.getUser();
-    if (!user) return new Response(JSON.stringify({ ok: false, error: 'No autenticado.' }), { status: 401 });
+    if (!user) return new Response(JSON.stringify({ ok: false, error: 'No autenticado.' }), { status: 200 });
 
     const supabaseAdmin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
     const { data: tokenRow } = await supabaseAdmin
@@ -49,7 +49,7 @@ serve(withCors(async req => {
       .single();
 
     if (!tokenRow) {
-      return new Response(JSON.stringify({ ok: false, error: 'Dropbox no está conectado.' }), { status: 404 });
+      return new Response(JSON.stringify({ ok: false, error: 'Dropbox no está conectado.' }), { status: 200 });
     }
 
     let accessToken = tokenRow.access_token;
@@ -90,19 +90,52 @@ serve(withCors(async req => {
 
     const listData = await listRes.json();
     if (!listRes.ok) {
-      return new Response(JSON.stringify({ ok: false, error: listData }), { status: listRes.status });
+      return new Response(JSON.stringify({ ok: false, error: JSON.stringify(listData) }), { status: 200 });
     }
 
-    const archivos = (listData.entries ?? [])
-      .filter((e: any) => e['.tag'] === 'file')
-      .map((f: any) => ({
-        plataforma: 'dropbox',
-        id: f.id,
-        nombre: f.name,
-        tipo_archivo: f.name.split('.').pop(),
-        modificado: f.server_modified,
-        path: f.path_lower
-      }));
+    async function obtenerLinkCompartido(path: string): Promise<string | null> {
+      // Intenta crear un link nuevo; si ya existe uno para ese archivo,
+      // Dropbox devuelve un error específico — en ese caso lo buscamos.
+      const crear = await fetch('https://api.dropboxapi.com/2/sharing/create_shared_link_with_settings', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path })
+      });
+      const datosCrear = await crear.json();
+      if (crear.ok) return datosCrear.url;
+
+      if (datosCrear?.error?.['.tag'] === 'shared_link_already_exists') {
+        const existentes = await fetch('https://api.dropboxapi.com/2/sharing/list_shared_links', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path, direct_only: true })
+        });
+        const datosExistentes = await existentes.json();
+        return datosExistentes?.links?.[0]?.url ?? null;
+      }
+
+      return null;
+    }
+
+    const archivosCrudos = (listData.entries ?? []).filter((e: any) => e['.tag'] === 'file');
+
+    const archivos = await Promise.all(
+      archivosCrudos.map(async (f: any) => {
+        const linkCompartir = await obtenerLinkCompartido(f.path_lower);
+        return {
+          plataforma: 'dropbox',
+          id: f.id,
+          nombre: f.name,
+          tipo_archivo: f.name.split('.').pop(),
+          modificado: f.server_modified,
+          path: f.path_lower,
+          // Un link "?dl=0" abre la vista previa de Dropbox; con "?dl=1"
+          // descarga/reproduce directo — útil para insertar en Apps Script.
+          url_externa: linkCompartir,
+          url_directa: linkCompartir ? linkCompartir.replace('?dl=0', '?dl=1').replace(/&dl=0/, '&dl=1') : null
+        };
+      })
+    );
 
     return new Response(JSON.stringify({ ok: true, archivos }), {
       headers: { 'Content-Type': 'application/json' }
