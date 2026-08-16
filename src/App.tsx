@@ -98,10 +98,13 @@ export default function App() {
     if (!code) return;
 
     const { data: session } = await supabase.auth.getSession();
-    await supabase.functions.invoke('dropbox-oauth-callback', {
+    const { data } = await supabase.functions.invoke('dropbox-oauth-callback', {
       body: { code },
       headers: { Authorization: `Bearer ${session.session?.access_token}` }
     });
+    if (!data?.ok) {
+      setErrorAuth(`No se pudo conectar Dropbox: ${data?.error ?? 'error desconocido'}`);
+    }
   }
 
   useEffect(() => {
