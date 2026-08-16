@@ -7,6 +7,8 @@ export default function Categorias() {
   const [categorias, setCategorias] = useState<Categoria[]>([]);
   const [nombre, setNombre] = useState('');
   const [color, setColor] = useState(COLORES_SUGERIDOS[0]);
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     cargar();
@@ -20,19 +22,42 @@ export default function Categorias() {
   async function crearCategoria(e: React.FormEvent) {
     e.preventDefault();
     if (!nombre.trim()) return;
+    setError(null);
+    setGuardando(true);
 
     const {
       data: { user }
     } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) {
+      setError('No hay sesión activa.');
+      setGuardando(false);
+      return;
+    }
 
-    await supabase.from('categorias').insert({ nombre: nombre.trim(), color, user_id: user.id });
+    const { error: errorInsertar } = await supabase
+      .from('categorias')
+      .insert({ nombre: nombre.trim(), color, user_id: user.id });
+
+    setGuardando(false);
+
+    if (errorInsertar) {
+      setError(`No se pudo crear: ${errorInsertar.message}`);
+      return;
+    }
+
     setNombre('');
     cargar();
   }
 
-  async function eliminarCategoria(id: string) {
-    await supabase.from('categorias').delete().eq('id', id);
+  async function eliminarCategoria(id: string, nombreCategoria: string) {
+    if (!window.confirm(`¿Eliminar "${nombreCategoria}"? Las fechas que la usen quedarán sin categoría.`)) {
+      return;
+    }
+    const { error: errorEliminar } = await supabase.from('categorias').delete().eq('id', id);
+    if (errorEliminar) {
+      setError(`No se pudo eliminar: ${errorEliminar.message}`);
+      return;
+    }
     cargar();
   }
 
@@ -68,10 +93,12 @@ export default function Categorias() {
         </div>
         <button
           type="submit"
-          className="font-body bg-ink text-paper rounded px-4 py-2 text-sm font-medium"
+          disabled={guardando}
+          className="font-body bg-ink text-paper rounded px-4 py-2 text-sm font-medium disabled:opacity-50"
         >
-          Crear categoría
+          {guardando ? 'Creando…' : 'Crear categoría'}
         </button>
+        {error && <p className="font-body text-sm text-crimson mt-2">{error}</p>}
       </form>
 
       {categorias.length > 0 && (
@@ -90,7 +117,7 @@ export default function Categorias() {
               <span className="font-body text-ink">{cat.nombre}</span>
             </div>
             <button
-              onClick={() => eliminarCategoria(cat.id)}
+              onClick={() => eliminarCategoria(cat.id, cat.nombre)}
               className="font-mono text-xs text-ink/40 hover:text-crimson"
             >
               eliminar
