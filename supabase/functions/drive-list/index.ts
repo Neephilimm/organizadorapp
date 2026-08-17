@@ -36,7 +36,7 @@ serve(withCors(async req => {
     if (!providerToken) {
       return new Response(
         JSON.stringify({ ok: false, error: 'Falta providerToken (sesión de Google expirada, vuelve a conectar).' }),
-        { status: 401 }
+        { status: 200 }
       );
     }
 
@@ -54,7 +54,7 @@ serve(withCors(async req => {
 
     if (!respuesta.ok) {
       const detalle = await respuesta.text();
-      return new Response(JSON.stringify({ ok: false, error: detalle }), { status: respuesta.status });
+      return new Response(JSON.stringify({ ok: false, error: detalle }), { status: 200 });
     }
 
     const data = await respuesta.json();
@@ -74,6 +74,6 @@ serve(withCors(async req => {
       headers: { 'Content-Type': 'application/json' }
     });
   } catch (e) {
-    return new Response(JSON.stringify({ ok: false, error: String(e) }), { status: 500 });
+    return new Response(JSON.stringify({ ok: false, error: String(e) }), { status: 200 });
   }
 }));
