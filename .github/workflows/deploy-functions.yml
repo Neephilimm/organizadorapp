@@ -24,6 +24,16 @@ jobs:
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
+      - name: Configurar las claves de Dropbox como secrets en Supabase
+        run: |
+          supabase secrets set \
+            DROPBOX_APP_KEY="${{ secrets.DROPBOX_APP_KEY }}" \
+            DROPBOX_APP_SECRET="${{ secrets.DROPBOX_APP_SECRET }}" \
+            DROPBOX_REDIRECT_URI="cl.organizador.academico://dropbox-callback" \
+            --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
       - name: Desplegar leer-imagen
         run: supabase functions deploy leer-imagen --project-ref ${{ secrets.SUPABASE_PROJECT_REF }} --no-verify-jwt
         env:
@@ -55,5 +65,15 @@ jobs:
 
       - name: Desplegar canvas-entregar-archivo
         run: supabase functions deploy canvas-entregar-archivo --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      - name: Desplegar dropbox-oauth-callback
+        run: supabase functions deploy dropbox-oauth-callback --project-ref ${{ secrets.SUPABASE_PROJECT_REF }} --no-verify-jwt
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      - name: Desplegar dropbox-list
+        run: supabase functions deploy dropbox-list --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
