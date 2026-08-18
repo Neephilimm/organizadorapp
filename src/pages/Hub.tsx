@@ -18,6 +18,23 @@ type ArchivoHub = {
 const DROPBOX_APP_KEY = import.meta.env.VITE_DROPBOX_APP_KEY as string;
 const DROPBOX_REDIRECT_URI = 'cl.organizador.academico://dropbox-callback';
 
+function generarCodeVerifier(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(32));
+  return btoa(String.fromCharCode(...bytes))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+}
+
+async function calcularCodeChallenge(verifier: string): Promise<string> {
+  const datos = new TextEncoder().encode(verifier);
+  const hash = await crypto.subtle.digest('SHA-256', datos);
+  return btoa(String.fromCharCode(...new Uint8Array(hash)))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '');
+}
+
 function nombreLegible(nombreEnStorage: string) {
   // Los archivos se guardan como "<timestamp>_<nombre original>"
   const sinPrefijo = nombreEnStorage.replace(/^\d+_/, '');
@@ -196,13 +213,22 @@ export default function Hub() {
   }
 
   async function conectarDropbox() {
-    const authUrl = `https://www.dropbox.com/oauth2/authorize?client_id=${DROPBOX_APP_KEY}&response_type=code&token_access_type=offline&redirect_uri=${encodeURIComponent(
-      DROPBOX_REDIRECT_URI
-    )}`;
+    // Dropbox exige que el redirect_uri sea "https://" salvo que se use PKCE,
+    // que es justo lo pensado para apps móviles con esquemas personalizados.
+    const codeVerifier = generarCodeVerifier();
+    localStorage.setItem('dropbox-code-verifier', codeVerifier);
+    const codeChallenge = await calcularCodeChallenge(codeVerifier);
+
+    const authUrl =
+      `https://www.dropbox.com/oauth2/authorize?client_id=${DROPBOX_APP_KEY}` +
+      `&response_type=code&token_access_type=offline` +
+      `&code_challenge=${encodeURIComponent(codeChallenge)}&code_challenge_method=S256` +
+      `&redirect_uri=${encodeURIComponent(DROPBOX_REDIRECT_URI)}`;
+
     await Browser.open({ url: authUrl });
     // El deep link cl.organizador.academico://dropbox-callback?code=... debe
     // capturarse en App.tsx (listener de appUrlOpen) y llamar a la función
-    // dropbox-oauth-callback con ese "code".
+    // dropbox-oauth-callback con ese "code" + el code_verifier guardado arriba.
   }
 
   return (
