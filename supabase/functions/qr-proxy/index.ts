@@ -40,10 +40,9 @@ serve(async req => {
   }
 
   try {
-    const url = new URL(req.url);
-    const destino = url.search ? `${QR_APP_URL}${url.search}` : QR_APP_URL;
-
-    const respuesta = await fetch(destino, { redirect: 'follow' });
+    // OJO: no reenviamos el query string original (traía nuestra propia
+    // apikey, que no le corresponde al Apps Script de destino).
+    const respuesta = await fetch(QR_APP_URL, { redirect: 'follow' });
     let html = await respuesta.text();
 
     // <base> hace que todos los enlaces/recursos relativos sigan apuntando
@@ -57,9 +56,12 @@ serve(async req => {
       html = baseTag + viewportTag + CSS_RESPONSIVO + html;
     }
 
-    return new Response(html, {
-      headers: { ...corsHeaders, 'Content-Type': 'text/html; charset=utf-8' }
-    });
+    const headers = new Headers();
+    Object.entries(corsHeaders).forEach(([k, v]) => headers.set(k, v));
+    headers.set('Content-Type', 'text/html; charset=utf-8');
+    headers.set('X-Content-Type-Options', 'nosniff');
+
+    return new Response(html, { status: 200, headers });
   } catch (e) {
     return new Response(`Error cargando el generador de QR: ${String(e)}`, {
       status: 200,
