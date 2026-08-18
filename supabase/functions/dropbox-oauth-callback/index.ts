@@ -54,15 +54,24 @@ serve(withCors(async req => {
       return new Response(JSON.stringify({ ok: false, error: 'Usuario no válido.' }), { status: 200 });
     }
 
-    const { code } = await req.json();
+    const { code, codeVerifier } = await req.json();
 
-    const params = new URLSearchParams({
-      code,
-      grant_type: 'authorization_code',
-      client_id: DROPBOX_APP_KEY,
-      client_secret: DROPBOX_APP_SECRET,
-      redirect_uri: DROPBOX_REDIRECT_URI
-    });
+    // Con PKCE se manda el code_verifier en vez del client_secret.
+    const params = codeVerifier
+      ? new URLSearchParams({
+          code,
+          grant_type: 'authorization_code',
+          client_id: DROPBOX_APP_KEY,
+          code_verifier: codeVerifier,
+          redirect_uri: DROPBOX_REDIRECT_URI
+        })
+      : new URLSearchParams({
+          code,
+          grant_type: 'authorization_code',
+          client_id: DROPBOX_APP_KEY,
+          client_secret: DROPBOX_APP_SECRET,
+          redirect_uri: DROPBOX_REDIRECT_URI
+        });
 
     const tokenRes = await fetch('https://api.dropboxapi.com/oauth2/token', {
       method: 'POST',
