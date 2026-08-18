@@ -98,10 +98,12 @@ export default function App() {
     if (!code) return;
 
     const { data: session } = await supabase.auth.getSession();
+    const codeVerifier = localStorage.getItem('dropbox-code-verifier');
     const { data } = await supabase.functions.invoke('dropbox-oauth-callback', {
-      body: { code },
+      body: { code, codeVerifier },
       headers: { Authorization: `Bearer ${session.session?.access_token}` }
     });
+    localStorage.removeItem('dropbox-code-verifier');
     if (!data?.ok) {
       setErrorAuth(`No se pudo conectar Dropbox: ${data?.error ?? 'error desconocido'}`);
     }
