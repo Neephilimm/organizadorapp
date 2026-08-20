@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { ChevronDown, ChevronRight } from 'lucide-react';
 import { supabase, Evento, Categoria } from '../lib/supabase';
 import { cancelarRecordatorio } from '../lib/notificaciones';
 import { format, differenceInCalendarDays, parseISO } from 'date-fns';
@@ -321,31 +322,41 @@ export default function Dashboard() {
 
                 <button
                   onClick={() => setExpandido(abierto ? null : ev.id)}
-                  className="flex-1 min-w-0 text-left"
+                  className="flex-1 min-w-0 text-left flex items-start gap-1"
                 >
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-mono text-xs uppercase tracking-wide text-ink/50">
-                      {esLibre ? '🎉 ' : ''}{etiquetaTipo}
+                  {(ev.descripcion || ev.url) && (
+                    <span className="text-ink/30 mt-1 shrink-0">
+                      {abierto ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
                     </span>
-                    {ev.cursoNombre && (
-                      <span className="font-mono text-[10px] text-amber">· {ev.cursoNombre}</span>
-                    )}
-                    {ev.origen === 'imagen' && (
-                      <span className="font-mono text-[10px] text-teal">· leído por IA</span>
-                    )}
-                    {nombreCategoria(ev.categoria_id) && (
-                      <span
-                        className="font-mono text-[10px]"
-                        style={{ color: colorCategoria(ev.categoria_id) }}
-                      >
-                        · {nombreCategoria(ev.categoria_id)}
+                  )}
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-mono text-xs uppercase tracking-wide text-ink/50">
+                        {esLibre ? '🎉 ' : ''}{etiquetaTipo}
                       </span>
+                      {ev.cursoNombre && (
+                        <span className="font-mono text-[10px] text-amber">· {ev.cursoNombre}</span>
+                      )}
+                      {ev.origen === 'imagen' && (
+                        <span className="font-mono text-[10px] text-teal">· leído por IA</span>
+                      )}
+                      {nombreCategoria(ev.categoria_id) && (
+                        <span
+                          className="font-mono text-[10px]"
+                          style={{ color: colorCategoria(ev.categoria_id) }}
+                        >
+                          · {nombreCategoria(ev.categoria_id)}
+                        </span>
+                      )}
+                    </div>
+                    <h2 className="font-display text-lg text-ink leading-tight">{ev.titulo}</h2>
+                    {!abierto && ev.descripcion && (
+                      <p className="font-body text-sm text-ink/60 mt-1 line-clamp-2">{ev.descripcion}</p>
+                    )}
+                    {!abierto && (ev.descripcion || ev.url) && (
+                      <p className="font-mono text-[10px] uppercase text-ink/30 mt-1">Tocar para ver más</p>
                     )}
                   </div>
-                  <h2 className="font-display text-lg text-ink leading-tight">{ev.titulo}</h2>
-                  {!abierto && ev.descripcion && (
-                    <p className="font-body text-sm text-ink/60 mt-1 line-clamp-2">{ev.descripcion}</p>
-                  )}
                 </button>
 
                 <div className="text-right shrink-0">
