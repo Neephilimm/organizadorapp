@@ -157,7 +157,7 @@ serve(withCors(async req => {
       headers: { 'Content-Type': 'application/json' }
     });
   } catch (e) {
-    return new Response(JSON.stringify({ ok: false, error: String(e) }), { status: 500 });
+    return new Response(JSON.stringify({ ok: false, error: String(e) }), { status: 200 });
   }
 }));
 
