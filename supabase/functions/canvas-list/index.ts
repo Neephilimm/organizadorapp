@@ -61,7 +61,7 @@ serve(withCors(async req => {
     if (!eventosRes.ok) {
       const detalle = await eventosRes.text();
       return new Response(JSON.stringify({ ok: false, error: `Canvas respondió ${eventosRes.status}: ${detalle}` }), {
-        status: eventosRes.status
+        status: 200
       });
     }
     const eventos = await eventosRes.json();
