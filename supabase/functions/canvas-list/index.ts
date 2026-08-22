@@ -132,12 +132,20 @@ serve(withCors(async req => {
     function limpiarHtml(html: string, maxLargo = 600): string {
   return html
     .replace(/<[^>]+>/g, ' ')
+    // Entidades HTML con nombre
     .replace(/&nbsp;/gi, ' ')
     .replace(/&amp;/gi, '&')
     .replace(/&lt;/gi, '<')
     .replace(/&gt;/gi, '>')
     .replace(/&quot;/gi, '"')
     .replace(/&#39;/gi, "'")
+    .replace(/&rsquo;|&lsquo;/gi, "'")
+    .replace(/&rdquo;|&ldquo;/gi, '"')
+    .replace(/&ndash;|&mdash;/gi, '-')
+    // Entidades numéricas tipo &#123; o &#x7B;
+    .replace(/&#x?[0-9a-f]+;/gi, ' ')
+    // Restos de formato tipo Markdown/subrayado que a veces deja Canvas (*, _, ~, #)
+    .replace(/[*_~#]{2,}/g, '')
     .replace(/\s+/g, ' ')
     .trim()
     .slice(0, maxLargo);
