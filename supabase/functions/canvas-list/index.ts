@@ -122,14 +122,28 @@ serve(withCors(async req => {
             titulo: a.title,
             curso: curso.name,
             fecha: a.posted_at,
-            mensaje: (a.message ?? '').replace(/<[^>]+>/g, '').slice(0, 200),
+            mensaje: limpiarHtml(a.message ?? '', 2000),
             url: a.html_url
           })
         );
       }
     }
 
-    function tipoDeTarea(asig: any): string {
+    function limpiarHtml(html: string, maxLargo = 600): string {
+  return html
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, maxLargo);
+}
+
+function tipoDeTarea(asig: any): string {
       if (asig.quiz_id) return 'Evaluación';
       if ((asig.submission_types ?? []).includes('discussion_topic')) return 'Foro';
       if ((asig.submission_types ?? []).includes('online_upload')) return 'Entrega de archivo';
@@ -147,7 +161,7 @@ serve(withCors(async req => {
         fecha: e.assignment.due_at,
         url: e.html_url,
         tipo: tipoDeTarea(e.assignment),
-        descripcion: (e.assignment.description ?? '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 600),
+        descripcion: limpiarHtml(e.assignment.description ?? ''),
         entregada: !!e.assignment.has_submitted_submissions,
         discussionTopicId: e.assignment.discussion_topic?.id ?? null,
         tiposDeArchivoPermitidos: e.assignment.allowed_extensions ?? []
