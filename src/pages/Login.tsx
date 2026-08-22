@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { Browser } from '@capacitor/browser';
 
 export default function Login() {
   const [modo, setModo] = useState<'entrar' | 'crear'>('entrar');
@@ -30,19 +29,6 @@ export default function Login() {
     }
 
     setCargando(false);
-  }
-
-  async function entrarConGoogle() {
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        scopes: 'https://www.googleapis.com/auth/drive.readonly',
-        redirectTo: 'cl.organizador.academico://login-callback',
-        skipBrowserRedirect: true
-      }
-    });
-    if (error) { setError(error.message); return; }
-    if (data?.url) await Browser.open({ url: data.url });
   }
 
   return (
@@ -95,13 +81,6 @@ export default function Login() {
             {cargando ? 'Un momento…' : modo === 'entrar' ? 'Iniciar sesión' : 'Crear cuenta'}
           </button>
         </form>
-
-        <button
-          onClick={entrarConGoogle}
-          className="w-full bg-white border border-ink/10 text-ink rounded py-2 font-body mt-3"
-        >
-          Continuar con Google
-        </button>
 
         <button
           onClick={() => setModo(modo === 'entrar' ? 'crear' : 'entrar')}
