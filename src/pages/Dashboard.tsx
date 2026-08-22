@@ -237,6 +237,15 @@ export default function Dashboard() {
     const coincideCategoria =
       !filtroCategoria ||
       (filtroCategoria === '__sin_categoria__' ? !ev.categoria_id : ev.categoria_id === filtroCategoria);
+
+    // Los feriados/días sin clases solo se muestran en el semestre si son de
+    // esta semana — si no, la lista se llenaría con TODO el año. El listado
+    // completo vive en la sección "Feriados" del menú.
+    if (ev.tipo === 'feriado' || ev.tipo === 'sin_clases') {
+      const dias = differenceInCalendarDays(parseISO(ev.fecha), new Date());
+      if (dias > 7) return false;
+    }
+
     return coincideTexto && coincideCategoria;
   });
 
@@ -335,7 +344,7 @@ export default function Dashboard() {
                         {esLibre ? '🎉 ' : ''}{etiquetaTipo}
                       </span>
                       {ev.cursoNombre && (
-                        <span className="font-mono text-[10px] text-amber">· {ev.cursoNombre}</span>
+                        <span className="font-mono text-sm font-bold text-amber">· {ev.cursoNombre}</span>
                       )}
                       {ev.origen === 'imagen' && (
                         <span className="font-mono text-[10px] text-teal">· leído por IA</span>
