@@ -34,6 +34,15 @@ jobs:
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
+      - name: Configurar las claves de Google Drive como secrets en Supabase
+        run: |
+          supabase secrets set \
+            GOOGLE_DRIVE_CLIENT_ID="${{ secrets.GOOGLE_DRIVE_CLIENT_ID }}" \
+            GOOGLE_DRIVE_REDIRECT_URI="com.googleusercontent.apps.78278139529-jm0ji532o6u3b4sode9nhg8btah80t7q:/oauth2redirect" \
+            --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
       - name: Desplegar leer-imagen
         run: supabase functions deploy leer-imagen --project-ref ${{ secrets.SUPABASE_PROJECT_REF }} --no-verify-jwt
         env:
@@ -75,5 +84,25 @@ jobs:
 
       - name: Desplegar dropbox-list
         run: supabase functions deploy dropbox-list --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      - name: Desplegar drive-oauth-callback
+        run: supabase functions deploy drive-oauth-callback --project-ref ${{ secrets.SUPABASE_PROJECT_REF }} --no-verify-jwt
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      - name: Desplegar drive-upload
+        run: supabase functions deploy drive-upload --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      - name: Desplegar drive-abrir
+        run: supabase functions deploy drive-abrir --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+
+      - name: Desplegar drive-eliminar
+        run: supabase functions deploy drive-eliminar --project-ref ${{ secrets.SUPABASE_PROJECT_REF }}
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
