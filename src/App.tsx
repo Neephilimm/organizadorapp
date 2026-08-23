@@ -91,6 +91,31 @@ export default function App() {
       return;
     }
 
+    if (url.startsWith('com.googleusercontent.apps.78278139529-jm0ji532o6u3b4sode9nhg8btah80t7q:')) {
+      await Browser.close().catch(() => {});
+      const parametros = new URL(url).searchParams;
+      const errorProveedor = parametros.get('error_description') || parametros.get('error');
+      const code = parametros.get('code');
+
+      if (errorProveedor) {
+        setErrorAuth(`No se pudo conectar Drive: ${errorProveedor}`);
+        return;
+      }
+      if (!code) return;
+
+      const { data: session } = await supabase.auth.getSession();
+      const codeVerifier = localStorage.getItem('drive-code-verifier');
+      const { data } = await supabase.functions.invoke('drive-oauth-callback', {
+        body: { code, codeVerifier },
+        headers: { Authorization: `Bearer ${session.session?.access_token}` }
+      });
+      localStorage.removeItem('drive-code-verifier');
+      if (!data?.ok) {
+        setErrorAuth(`No se pudo conectar Drive: ${data?.error ?? 'error desconocido'}`);
+      }
+      return;
+    }
+
     if (!url.startsWith('cl.organizador.academico://dropbox-callback')) return;
 
     await Browser.close().catch(() => {});
