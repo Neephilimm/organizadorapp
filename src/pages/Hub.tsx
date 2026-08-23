@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Browser } from '@capacitor/browser';
 import { App as CapApp } from '@capacitor/app';
+import { Filesystem, Directory } from '@capacitor/filesystem';
+import { Share } from '@capacitor/share';
 import { supabase } from '../lib/supabase';
 
 type ArchivoHub = {
@@ -11,12 +13,18 @@ type ArchivoHub = {
   url_externa?: string | null;
   url_directa?: string | null;
   storage_path?: string | null;
+  fileId?: string | null;
+  mimeType?: string | null;
   modificado?: string;
   compartido_por?: string | null;
 };
 
 const DROPBOX_APP_KEY = import.meta.env.VITE_DROPBOX_APP_KEY as string;
 const DROPBOX_REDIRECT_URI = 'cl.organizador.academico://dropbox-callback';
+
+const GOOGLE_DRIVE_CLIENT_ID = import.meta.env.VITE_GOOGLE_DRIVE_CLIENT_ID as string;
+const GOOGLE_DRIVE_REDIRECT_URI =
+  'com.googleusercontent.apps.78278139529-jm0ji532o6u3b4sode9nhg8btah80t7q:/oauth2redirect';
 
 function generarCodeVerifier(): string {
   const bytes = crypto.getRandomValues(new Uint8Array(32));
@@ -41,16 +49,27 @@ function nombreLegible(nombreEnStorage: string) {
   return decodeURIComponent(sinPrefijo);
 }
 
+function blobABase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const lector = new FileReader();
+    lector.onloadend = () => resolve((lector.result as string).split(',')[1] ?? '');
+    lector.onerror = reject;
+    lector.readAsDataURL(blob);
+  });
+}
+
 export default function Hub() {
   const [seccion, setSeccion] = useState<'mios' | 'drive' | 'dropbox'>('mios');
   const [archivos, setArchivos] = useState<ArchivoHub[]>([]);
   const [cargando, setCargando] = useState(true);
+  const [driveConectado, setDriveConectado] = useState<boolean | null>(null);
   const [dropboxConectado, setDropboxConectado] = useState<boolean | null>(null);
   const [subiendo, setSubiendo] = useState(false);
   const [abriendo, setAbriendo] = useState<string | null>(null);
   const [eliminando, setEliminando] = useState<string | null>(null);
   const [copiado, setCopiado] = useState<string | null>(null);
   const inputArchivo = useRef<HTMLInputElement>(null);
+  const inputArchivoDrive = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     cargarSeccion(seccion);
@@ -98,19 +117,14 @@ export default function Hub() {
     }
 
     if (s === 'drive') {
-      const { data: session } = await supabase.auth.getSession();
-      const providerToken = (session.session as any)?.provider_token;
-
-      if (!providerToken) {
+      const { data, error } = await supabase.functions.invoke('drive-list', { body: {} });
+      if (error || !data?.ok) {
+        setDriveConectado(false);
         setArchivos([]);
-        setCargando(false);
-        return;
+      } else {
+        setDriveConectado(true);
+        setArchivos(data.archivos);
       }
-
-      const { data, error } = await supabase.functions.invoke('drive-list', {
-        body: { providerToken, seccion: 'compartidos' }
-      });
-      setArchivos(error || !data?.ok ? [] : data.archivos);
     }
 
     if (s === 'dropbox') {
@@ -162,6 +176,28 @@ export default function Hub() {
     if (inputArchivo.current) inputArchivo.current.value = '';
   }
 
+  async function subirArchivoADrive(e: React.ChangeEvent<HTMLInputElement>) {
+    const lista = e.target.files;
+    if (!lista || lista.length === 0) return;
+
+    setSubiendo(true);
+    for (const archivo of Array.from(lista)) {
+      const base64 = await blobABase64(archivo);
+      const { data } = await supabase.functions.invoke('drive-upload', {
+        body: {
+          nombreArchivo: archivo.name,
+          contentType: archivo.type || 'application/octet-stream',
+          archivoBase64: base64
+        }
+      });
+      if (!data?.ok) alert(`No se pudo subir "${archivo.name}": ${data?.error ?? 'error desconocido'}`);
+    }
+
+    await cargarSeccion('drive');
+    setSubiendo(false);
+    if (inputArchivoDrive.current) inputArchivoDrive.current.value = '';
+  }
+
   async function abrirArchivo(a: ArchivoHub) {
     setAbriendo(a.nombre);
 
@@ -171,6 +207,22 @@ export default function Hub() {
         .createSignedUrl(a.storage_path, 60 * 10);
       if (!error && data?.signedUrl) {
         await Browser.open({ url: data.signedUrl });
+      }
+    } else if (a.plataforma === 'drive' && a.fileId) {
+      // Descarga el archivo y lo abre con las apps del celular (en vez de
+      // mandarte al sitio de Drive).
+      const { data } = await supabase.functions.invoke('drive-abrir', {
+        body: { fileId: a.fileId, mimeType: a.mimeType, nombreArchivo: a.nombre }
+      });
+      if (data?.ok) {
+        const escrito = await Filesystem.writeFile({
+          path: data.nombreArchivo,
+          data: data.archivoBase64,
+          directory: Directory.Cache
+        });
+        await Share.share({ title: data.nombreArchivo, url: escrito.uri });
+      } else {
+        alert(data?.error ?? 'No se pudo abrir el archivo.');
       }
     } else if (a.url_externa) {
       await Browser.open({ url: a.url_externa });
@@ -188,28 +240,41 @@ export default function Hub() {
   }
 
   async function eliminarArchivo(a: ArchivoHub) {
-    if (a.plataforma !== 'supabase' || !a.storage_path) return;
     if (!window.confirm(`¿Eliminar "${a.nombre}"? No se puede deshacer.`)) return;
 
-    setEliminando(a.storage_path);
-    await supabase.storage.from('archivos-usuario').remove([a.storage_path]);
-    await supabase.from('archivos_subidos').delete().eq('storage_path', a.storage_path);
-    setEliminando(null);
-    await cargarSeccion('mios');
+    if (a.plataforma === 'supabase' && a.storage_path) {
+      setEliminando(a.storage_path);
+      await supabase.storage.from('archivos-usuario').remove([a.storage_path]);
+      await supabase.from('archivos_subidos').delete().eq('storage_path', a.storage_path);
+      setEliminando(null);
+      await cargarSeccion('mios');
+    } else if (a.plataforma === 'drive' && a.fileId) {
+      setEliminando(a.fileId);
+      const { data } = await supabase.functions.invoke('drive-eliminar', { body: { fileId: a.fileId } });
+      setEliminando(null);
+      if (!data?.ok) alert(data?.error ?? 'No se pudo eliminar.');
+      await cargarSeccion('drive');
+    }
   }
 
   async function conectarGoogleDrive() {
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        scopes: 'https://www.googleapis.com/auth/drive.readonly',
-        queryParams: { access_type: 'offline', prompt: 'consent' },
-        redirectTo: 'cl.organizador.academico://login-callback',
-        skipBrowserRedirect: true
-      }
-    });
-    if (error) return;
-    if (data?.url) await Browser.open({ url: data.url });
+    // Conector propio (no pasa por el login de la app), igual que Dropbox:
+    // más confiable que depender del sistema de login de Supabase.
+    const codeVerifier = generarCodeVerifier();
+    localStorage.setItem('drive-code-verifier', codeVerifier);
+    const codeChallenge = await calcularCodeChallenge(codeVerifier);
+
+    const authUrl =
+      `https://accounts.google.com/o/oauth2/v2/auth?client_id=${GOOGLE_DRIVE_CLIENT_ID}` +
+      `&response_type=code&access_type=offline&prompt=consent` +
+      `&scope=${encodeURIComponent('https://www.googleapis.com/auth/drive')}` +
+      `&code_challenge=${encodeURIComponent(codeChallenge)}&code_challenge_method=S256` +
+      `&redirect_uri=${encodeURIComponent(GOOGLE_DRIVE_REDIRECT_URI)}`;
+
+    await Browser.open({ url: authUrl });
+    // El deep link vuelve a com.googleusercontent.apps...:/oauth2redirect?code=...
+    // y se captura en App.tsx, que llama a drive-oauth-callback con ese código
+    // + el code_verifier guardado arriba.
   }
 
   async function conectarDropbox() {
@@ -268,10 +333,29 @@ export default function Hub() {
         </>
       )}
 
-      {seccion === 'drive' && !cargando && archivos.length === 0 && (
+      {seccion === 'drive' && driveConectado === false && !cargando && (
         <button onClick={conectarGoogleDrive} className="w-full bg-ink text-paper rounded-lg py-3 font-body mb-4">
           Conectar Google Drive
         </button>
+      )}
+
+      {seccion === 'drive' && driveConectado && (
+        <>
+          <input
+            ref={inputArchivoDrive}
+            type="file"
+            multiple
+            onChange={subirArchivoADrive}
+            className="hidden"
+          />
+          <button
+            onClick={() => inputArchivoDrive.current?.click()}
+            disabled={subiendo}
+            className="w-full bg-ink text-paper rounded-lg py-3 font-body mb-4 disabled:opacity-50"
+          >
+            {subiendo ? 'Subiendo…' : '⬆ Subir a Drive'}
+          </button>
+        </>
       )}
 
       {seccion === 'dropbox' && dropboxConectado === false && (
@@ -321,14 +405,14 @@ export default function Hub() {
               </button>
             )}
 
-            {a.plataforma === 'supabase' && (
+            {(a.plataforma === 'supabase' || a.plataforma === 'drive') && (
               <button
                 onClick={() => eliminarArchivo(a)}
-                disabled={eliminando === a.storage_path}
+                disabled={eliminando === a.storage_path || eliminando === a.fileId}
                 aria-label="Eliminar"
                 className="shrink-0 w-8 h-8 rounded-full text-crimson font-mono disabled:opacity-40"
               >
-                {eliminando === a.storage_path ? '…' : '✕'}
+                {eliminando === a.storage_path || eliminando === a.fileId ? '…' : '✕'}
               </button>
             )}
           </div>
