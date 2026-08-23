@@ -1,14 +1,16 @@
 // Supabase Edge Function: drive-list
-// Lista archivos recientes propios y compartidos contigo desde Google Drive.
-// Requiere que el usuario haya iniciado sesión con Google en la app
-// solicitando el scope: https://www.googleapis.com/auth/drive.readonly
-//
-// El cliente envía el provider_token de su sesión de Supabase (el access
-// token de Google que Supabase Auth entrega tras el login OAuth).
+// Lista archivos de Google Drive usando el token guardado del usuario
+// (conector propio, no depende del login de Supabase). Renueva el token
+// automáticamente si ya venció.
 //
 // Deploy: supabase functions deploy drive-list
 
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.45.4';
+
+const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!;
+const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const GOOGLE_CLIENT_ID = Deno.env.get('GOOGLE_DRIVE_CLIENT_ID')!;
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -28,47 +30,86 @@ function withCors(handler: (req: Request) => Promise<Response>) {
   };
 }
 
+async function obtenerAccessTokenValido(supabaseAdmin: any, userId: string): Promise<string | null> {
+  const { data: conexion } = await supabaseAdmin
+    .from('drive_tokens')
+    .select('*')
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (!conexion) return null;
+
+  const yaVencido = new Date(conexion.expira_en).getTime() < Date.now() + 60_000;
+  if (!yaVencido) return conexion.access_token;
+
+  const params = new URLSearchParams({
+    client_id: GOOGLE_CLIENT_ID,
+    refresh_token: conexion.refresh_token,
+    grant_type: 'refresh_token'
+  });
+
+  const respuesta = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: params
+  });
+
+  if (!respuesta.ok) return null;
+  const tokenData = await respuesta.json();
+
+  const expiraEn = new Date(Date.now() + tokenData.expires_in * 1000).toISOString();
+  await supabaseAdmin
+    .from('drive_tokens')
+    .update({ access_token: tokenData.access_token, expira_en: expiraEn, updated_at: new Date().toISOString() })
+    .eq('user_id', userId);
+
+  return tokenData.access_token;
+}
+
 serve(withCors(async req => {
   try {
-    const { providerToken, seccion } = await req.json();
-    // seccion: 'mios' | 'compartidos'
-
-    if (!providerToken) {
-      return new Response(
-        JSON.stringify({ ok: false, error: 'Falta providerToken (sesión de Google expirada, vuelve a conectar).' }),
-        { status: 200 }
-      );
-    }
-
-    const query = seccion === 'compartidos' ? 'sharedWithMe=true' : "'me' in owners";
-    const fields =
-      'files(id,name,mimeType,webViewLink,thumbnailLink,iconLink,modifiedTime,size,sharingUser)';
-
-    const url = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(
-      query
-    )}&orderBy=modifiedTime desc&pageSize=30&fields=${encodeURIComponent(fields)}`;
-
-    const respuesta = await fetch(url, {
-      headers: { Authorization: `Bearer ${providerToken}` }
+    const authHeader = req.headers.get('Authorization')!;
+    const supabaseUser = createClient(SUPABASE_URL, Deno.env.get('SUPABASE_ANON_KEY')!, {
+      global: { headers: { Authorization: authHeader } }
     });
+    const {
+      data: { user }
+    } = await supabaseUser.auth.getUser();
+    if (!user) return new Response(JSON.stringify({ ok: false, error: 'No autenticado.' }), { status: 200 });
 
-    if (!respuesta.ok) {
-      const detalle = await respuesta.text();
-      return new Response(JSON.stringify({ ok: false, error: detalle }), { status: 200 });
+    const supabaseAdmin = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
+    const accessToken = await obtenerAccessTokenValido(supabaseAdmin, user.id);
+
+    if (!accessToken) {
+      return new Response(JSON.stringify({ ok: false, error: 'Drive no está conectado.' }), { status: 200 });
     }
 
-    const data = await respuesta.json();
+    const listaRes = await fetch(
+      'https://www.googleapis.com/drive/v3/files?pageSize=50&orderBy=modifiedTime desc' +
+        '&fields=files(id,name,mimeType,modifiedTime,size)&q=trashed=false',
+      { headers: { Authorization: `Bearer ${accessToken}` } }
+    );
 
-    const archivos = (data.files ?? []).map((f: any) => ({
-      plataforma: 'drive',
-      id: f.id,
-      nombre: f.name,
-      tipo_archivo: f.mimeType,
-      preview: f.thumbnailLink ?? f.iconLink,
-      url_externa: f.webViewLink,
-      modificado: f.modifiedTime,
-      compartido_por: f.sharingUser?.displayName ?? null
-    }));
+    if (!listaRes.ok) {
+      const detalle = await listaRes.text();
+      return new Response(JSON.stringify({ ok: false, error: `Drive respondió ${listaRes.status}: ${detalle}` }), {
+        status: 200
+      });
+    }
+
+    const listaData = await listaRes.json();
+
+    const archivos = (listaData.files ?? [])
+      .filter((f: any) => f.mimeType !== 'application/vnd.google-apps.folder')
+      .map((f: any) => ({
+        plataforma: 'drive',
+        id: f.id,
+        nombre: f.name,
+        tipo_archivo: f.name.split('.').pop() ?? '',
+        modificado: f.modifiedTime,
+        mimeType: f.mimeType,
+        esNativoDeGoogle: f.mimeType?.startsWith('application/vnd.google-apps')
+      }));
 
     return new Response(JSON.stringify({ ok: true, archivos }), {
       headers: { 'Content-Type': 'application/json' }
