@@ -48,22 +48,33 @@ jobs:
           with open(ruta) as f:
               manifest = f.read()
 
-          filtro = (
-              "\n            <intent-filter>\n"
-              '                <action android:name="android.intent.action.VIEW" />\n'
-              '                <category android:name="android.intent.category.DEFAULT" />\n'
-              '                <category android:name="android.intent.category.BROWSABLE" />\n'
-              '                <data android:scheme="cl.organizador.academico" />\n'
-              "            </intent-filter>\n"
-          )
+          def filtro_para(esquema):
+              return (
+                  "\n            <intent-filter>\n"
+                  '                <action android:name="android.intent.action.VIEW" />\n'
+                  '                <category android:name="android.intent.category.DEFAULT" />\n'
+                  '                <category android:name="android.intent.category.BROWSABLE" />\n'
+                  f'                <data android:scheme="{esquema}" />\n'
+                  "            </intent-filter>\n"
+              )
 
-          if "cl.organizador.academico" not in manifest:
-              manifest = manifest.replace("</activity>", filtro + "        </activity>", 1)
+          esquemas = [
+              "cl.organizador.academico",
+              "com.googleusercontent.apps.78278139529-jm0ji532o6u3b4sode9nhg8btah80t7q",
+          ]
+
+          cambiado = False
+          for esquema in esquemas:
+              if esquema not in manifest:
+                  manifest = manifest.replace("</activity>", filtro_para(esquema) + "        </activity>", 1)
+                  cambiado = True
+                  print(f"Intent-filter agregado: {esquema}")
+              else:
+                  print(f"Ya estaba presente: {esquema}")
+
+          if cambiado:
               with open(ruta, "w") as f:
                   f.write(manifest)
-              print("Intent-filter agregado.")
-          else:
-              print("Ya estaba presente.")
           PYEOF2
           python3 /tmp/patch_manifest.py
           cat android/app/src/main/AndroidManifest.xml
