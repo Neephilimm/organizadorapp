@@ -104,22 +104,38 @@ export default function App() {
         setErrorAuth(`No se pudo conectar Drive: ${errorProveedor}`);
         return;
       }
-      if (!code) return;
+      if (!code) {
+        setErrorAuth(`Drive: la URL de regreso no traía un código. URL completa: ${url}`);
+        return;
+      }
 
       const { data: session } = await supabase.auth.getSession();
       const codeVerifier = localStorage.getItem('drive-code-verifier');
-      const { data } = await supabase.functions.invoke('drive-oauth-callback', {
+      const { data, error: errorInvoke } = await supabase.functions.invoke('drive-oauth-callback', {
         body: { code, codeVerifier },
         headers: { Authorization: `Bearer ${session.session?.access_token}` }
       });
       localStorage.removeItem('drive-code-verifier');
+
+      if (errorInvoke) {
+        setErrorAuth(`Drive: fallo de red al canjear el código (${errorInvoke.message}).`);
+        return;
+      }
       if (!data?.ok) {
         setErrorAuth(`No se pudo conectar Drive: ${data?.error ?? 'error desconocido'}`);
+        return;
       }
+      setErrorAuth('✅ Drive conectado correctamente.');
+      setTimeout(() => setErrorAuth(null), 4000);
       return;
     }
 
-    if (!url.startsWith('cl.organizador.academico://dropbox-callback')) return;
+    if (!url.startsWith('cl.organizador.academico://dropbox-callback')) {
+      // Ninguno de los formatos conocidos coincidió — mostramos la URL cruda
+      // para poder diagnosticar exactamente qué llegó.
+      setErrorAuth(`Enlace de regreso no reconocido: ${url}`);
+      return;
+    }
 
     await Browser.close().catch(() => {});
     const code = new URL(url).searchParams.get('code');
