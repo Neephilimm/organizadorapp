@@ -127,6 +127,7 @@ export default function App() {
       }
       setErrorAuth('✅ Drive conectado correctamente.');
       setTimeout(() => setErrorAuth(null), 4000);
+      window.dispatchEvent(new CustomEvent('conector-actualizado', { detail: { plataforma: 'drive' } }));
       return;
     }
 
@@ -150,7 +151,9 @@ export default function App() {
     localStorage.removeItem('dropbox-code-verifier');
     if (!data?.ok) {
       setErrorAuth(`No se pudo conectar Dropbox: ${data?.error ?? 'error desconocido'}`);
+      return;
     }
+    window.dispatchEvent(new CustomEvent('conector-actualizado', { detail: { plataforma: 'dropbox' } }));
   }
 
   useEffect(() => {
