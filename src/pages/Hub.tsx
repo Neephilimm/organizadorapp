@@ -81,8 +81,19 @@ export default function Hub() {
     const listener = CapApp.addListener('appStateChange', ({ isActive }) => {
       if (isActive) cargarSeccion(seccion);
     });
+
+    // La conexión en sí (canjear el código) sigue en curso todavía cuando
+    // appStateChange se dispara, así que además escuchamos el aviso de que
+    // YA terminó (éxito o error) para refrescar en el momento justo.
+    function alConectar(e: Event) {
+      const detalle = (e as CustomEvent).detail;
+      if (detalle?.plataforma === seccion) cargarSeccion(seccion);
+    }
+    window.addEventListener('conector-actualizado', alConectar);
+
     return () => {
       listener.then(l => l.remove());
+      window.removeEventListener('conector-actualizado', alConectar);
     };
   }, [seccion]);
 
