@@ -343,9 +343,6 @@ export default function Dashboard() {
                       <span className="font-mono text-xs uppercase tracking-wide text-ink/50">
                         {esLibre ? '🎉 ' : ''}{etiquetaTipo}
                       </span>
-                      {ev.cursoNombre && (
-                        <span className="font-mono text-sm font-bold text-amber">· {ev.cursoNombre}</span>
-                      )}
                       {ev.origen === 'imagen' && (
                         <span className="font-mono text-[10px] text-teal">· leído por IA</span>
                       )}
@@ -358,6 +355,11 @@ export default function Dashboard() {
                         </span>
                       )}
                     </div>
+                    {ev.cursoNombre && (
+                      <p className="font-display text-base font-bold text-amber leading-tight mt-1">
+                        {ev.cursoNombre}
+                      </p>
+                    )}
                     <h2 className="font-display text-lg text-ink leading-tight">{ev.titulo}</h2>
                     {!abierto && ev.descripcion && (
                       <p className="font-body text-sm text-ink/60 mt-1 line-clamp-2">{ev.descripcion}</p>
