@@ -346,18 +346,13 @@ export default function Dashboard() {
                       {ev.origen === 'imagen' && (
                         <span className="font-mono text-[10px] text-teal">· leído por IA</span>
                       )}
-                      {nombreCategoria(ev.categoria_id) && (
-                        <span
-                          className="font-mono text-[10px]"
-                          style={{ color: colorCategoria(ev.categoria_id) }}
-                        >
-                          · {nombreCategoria(ev.categoria_id)}
-                        </span>
-                      )}
                     </div>
-                    {ev.cursoNombre && (
-                      <p className="font-display text-base font-bold text-amber leading-tight mt-1">
-                        {ev.cursoNombre}
+                    {(ev.cursoNombre || nombreCategoria(ev.categoria_id)) && (
+                      <p
+                        className="font-display text-base font-bold leading-tight mt-1"
+                        style={{ color: ev.cursoNombre ? '#D6A419' : colorCategoria(ev.categoria_id) }}
+                      >
+                        {ev.cursoNombre ?? nombreCategoria(ev.categoria_id)}
                       </p>
                     )}
                     <h2 className="font-display text-lg text-ink leading-tight">{ev.titulo}</h2>
