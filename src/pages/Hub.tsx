@@ -15,6 +15,7 @@ type ArchivoHub = {
   storage_path?: string | null;
   fileId?: string | null;
   mimeType?: string | null;
+  path?: string | null;
   modificado?: string;
   compartido_por?: string | null;
 };
@@ -70,6 +71,7 @@ export default function Hub() {
   const [copiado, setCopiado] = useState<string | null>(null);
   const inputArchivo = useRef<HTMLInputElement>(null);
   const inputArchivoDrive = useRef<HTMLInputElement>(null);
+  const inputArchivoDropbox = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     cargarSeccion(seccion);
@@ -209,6 +211,24 @@ export default function Hub() {
     if (inputArchivoDrive.current) inputArchivoDrive.current.value = '';
   }
 
+  async function subirArchivoADropbox(e: React.ChangeEvent<HTMLInputElement>) {
+    const lista = e.target.files;
+    if (!lista || lista.length === 0) return;
+
+    setSubiendo(true);
+    for (const archivo of Array.from(lista)) {
+      const base64 = await blobABase64(archivo);
+      const { data } = await supabase.functions.invoke('dropbox-upload', {
+        body: { nombreArchivo: archivo.name, archivoBase64: base64 }
+      });
+      if (!data?.ok) alert(`No se pudo subir "${archivo.name}": ${data?.error ?? 'error desconocido'}`);
+    }
+
+    await cargarSeccion('dropbox');
+    setSubiendo(false);
+    if (inputArchivoDropbox.current) inputArchivoDropbox.current.value = '';
+  }
+
   async function abrirArchivo(a: ArchivoHub) {
     setAbriendo(a.nombre);
 
@@ -224,6 +244,20 @@ export default function Hub() {
       // mandarte al sitio de Drive).
       const { data } = await supabase.functions.invoke('drive-abrir', {
         body: { fileId: a.fileId, mimeType: a.mimeType, nombreArchivo: a.nombre }
+      });
+      if (data?.ok) {
+        const escrito = await Filesystem.writeFile({
+          path: data.nombreArchivo,
+          data: data.archivoBase64,
+          directory: Directory.Cache
+        });
+        await Share.share({ title: data.nombreArchivo, url: escrito.uri });
+      } else {
+        alert(data?.error ?? 'No se pudo abrir el archivo.');
+      }
+    } else if (a.plataforma === 'dropbox' && a.path) {
+      const { data } = await supabase.functions.invoke('dropbox-abrir', {
+        body: { path: a.path, nombreArchivo: a.nombre }
       });
       if (data?.ok) {
         const escrito = await Filesystem.writeFile({
@@ -373,6 +407,25 @@ export default function Hub() {
         <button onClick={conectarDropbox} className="w-full bg-ink text-paper rounded-lg py-3 font-body mb-4">
           Conectar Dropbox
         </button>
+      )}
+
+      {seccion === 'dropbox' && dropboxConectado && (
+        <>
+          <input
+            ref={inputArchivoDropbox}
+            type="file"
+            multiple
+            onChange={subirArchivoADropbox}
+            className="hidden"
+          />
+          <button
+            onClick={() => inputArchivoDropbox.current?.click()}
+            disabled={subiendo}
+            className="w-full bg-ink text-paper rounded-lg py-3 font-body mb-4 disabled:opacity-50"
+          >
+            {subiendo ? 'Subiendo…' : '⬆ Subir a Dropbox'}
+          </button>
+        </>
       )}
 
       {cargando && <p className="font-body text-ink/50">Cargando…</p>}
