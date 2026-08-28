@@ -102,8 +102,10 @@ serve(withCors(async req => {
         const files = await filesRes.json();
         files.forEach((f: any) =>
           archivos.push({
+            id: f.id,
             nombre: f.display_name,
             curso: curso.name,
+            cursoId: curso.id,
             url: f.url,
             actualizado: f.updated_at,
             tipo: f['content-type']
@@ -123,9 +125,32 @@ serve(withCors(async req => {
             curso: curso.name,
             fecha: a.posted_at,
             mensaje: limpiarHtml(a.message ?? '', 2000),
-            url: a.html_url
+            url: a.html_url,
+            archivos: (a.attachments ?? []).map((f: any) => ({
+              id: f.id,
+              nombre: f.display_name ?? f.filename,
+              cursoId: curso.id
+            }))
           })
         );
+      }
+
+      // Desglose de notas: cada tarea del curso con lo que el alumno sacó
+      const asignRes = await fetch(
+        `${base}/courses/${curso.id}/assignments?include[]=submission&per_page=100`,
+        { headers }
+      );
+      if (asignRes.ok) {
+        const asignaciones = await asignRes.json();
+        const desglose = asignaciones
+          .filter((a: any) => a.submission?.workflow_state !== 'unsubmitted' || a.submission?.score !== null)
+          .map((a: any) => ({
+            nombre: a.name,
+            puntaje: a.submission?.score ?? null,
+            puntajeMaximo: a.points_possible ?? null
+          }));
+        const cal = calificaciones.find((c: any) => c.curso === curso.id);
+        if (cal) cal.desglose = desglose;
       }
     }
 
