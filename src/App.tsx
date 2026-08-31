@@ -13,6 +13,7 @@ import {
   FolderOpen,
   RefreshCw,
   GraduationCap,
+  BookOpen,
   PartyPopper,
   Settings
 } from 'lucide-react';
@@ -27,6 +28,7 @@ import Convertidor from './pages/Convertidor';
 import Canvas from './pages/Canvas';
 import Ajustes from './pages/Ajustes';
 import Feriados from './pages/Feriados';
+import Modulos from './pages/Modulos';
 import Login from './pages/Login';
 import type { Session } from '@supabase/supabase-js';
 
@@ -38,6 +40,7 @@ const GRUPOS_NAV = [
       { to: '/nuevo', label: 'Nueva fecha', icono: Plus },
       { to: '/categorias', label: 'Categorías', icono: Tag },
       { to: '/canvas', label: 'Canvas', icono: GraduationCap },
+      { to: '/modulos', label: 'Módulos', icono: BookOpen },
       { to: '/feriados', label: 'Feriados', icono: PartyPopper }
     ]
   },
@@ -274,6 +277,7 @@ export default function App() {
           <Route path="/nuevo" element={<NuevoEvento />} />
           <Route path="/categorias" element={<Categorias />} />
           <Route path="/canvas" element={<Canvas />} />
+          <Route path="/modulos" element={<Modulos />} />
           <Route path="/feriados" element={<Feriados />} />
           <Route path="/noticias" element={<Noticias />} />
           <Route path="/herramientas" element={<Herramientas />} />
