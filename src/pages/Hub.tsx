@@ -3,7 +3,9 @@ import { Browser } from '@capacitor/browser';
 import { App as CapApp } from '@capacitor/app';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
+import { FileOpener } from '@capacitor-community/file-opener';
 import { supabase } from '../lib/supabase';
+import { mimeDesdeNombre, esAudio } from '../lib/archivos';
 
 type ArchivoHub = {
   plataforma: 'supabase' | 'drive' | 'dropbox';
