@@ -103,7 +103,7 @@ serve(withCors(async req => {
       .filter((f: any) => f.mimeType !== 'application/vnd.google-apps.folder')
       .map((f: any) => ({
         plataforma: 'drive',
-        id: f.id,
+        fileId: f.id,
         nombre: f.name,
         tipo_archivo: f.name.split('.').pop() ?? '',
         modificado: f.modifiedTime,
