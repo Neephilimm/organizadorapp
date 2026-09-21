@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
+import { FileOpener } from '@capacitor-community/file-opener';
 import { supabase } from '../lib/supabase';
 import { avisarNovedadesCanvas } from '../lib/notificaciones';
+import { mimeDesdeNombre, esAudio } from '../lib/archivos';
 
 type Tarea = { titulo: string; curso: string; fecha: string; url: string };
 type ArchivoAdjunto = { id: number; nombre: string; cursoId: number };
