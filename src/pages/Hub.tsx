@@ -71,6 +71,7 @@ export default function Hub() {
   const [abriendo, setAbriendo] = useState<string | null>(null);
   const [eliminando, setEliminando] = useState<string | null>(null);
   const [copiado, setCopiado] = useState<string | null>(null);
+  const [reproduciendo, setReproduciendo] = useState<{ nombre: string; url: string } | null>(null);
   const inputArchivo = useRef<HTMLInputElement>(null);
   const inputArchivoDrive = useRef<HTMLInputElement>(null);
   const inputArchivoDropbox = useRef<HTMLInputElement>(null);
