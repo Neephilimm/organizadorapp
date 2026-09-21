@@ -475,14 +475,14 @@ export default function Hub() {
               </button>
             )}
 
-            {(a.plataforma === 'supabase' || a.plataforma === 'drive') && (
+            {(a.plataforma === 'supabase' || a.plataforma === 'drive' || a.plataforma === 'dropbox') && (
               <button
                 onClick={() => eliminarArchivo(a)}
-                disabled={eliminando === a.storage_path || eliminando === a.fileId}
+                disabled={eliminando === a.storage_path || eliminando === a.fileId || eliminando === a.path}
                 aria-label="Eliminar"
                 className="shrink-0 w-8 h-8 rounded-full text-crimson font-mono disabled:opacity-40"
               >
-                {eliminando === a.storage_path || eliminando === a.fileId ? '…' : '✕'}
+                {eliminando === a.storage_path || eliminando === a.fileId || eliminando === a.path ? '…' : '✕'}
               </button>
             )}
           </div>
