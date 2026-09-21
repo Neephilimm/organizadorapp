@@ -299,6 +299,12 @@ export default function Hub() {
       setEliminando(null);
       if (!data?.ok) alert(data?.error ?? 'No se pudo eliminar.');
       await cargarSeccion('drive');
+    } else if (a.plataforma === 'dropbox' && a.path) {
+      setEliminando(a.path);
+      const { data } = await supabase.functions.invoke('dropbox-eliminar', { body: { path: a.path } });
+      setEliminando(null);
+      if (!data?.ok) alert(data?.error ?? 'No se pudo eliminar.');
+      await cargarSeccion('dropbox');
     }
   }
 
