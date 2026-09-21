@@ -15,7 +15,15 @@ type ArchivoCanvas = {
   actualizado: string;
   tipo: string;
 };
-type DesgloseNota = { nombre: string; puntaje: number | null; puntajeMaximo: number | null };
+type ComentarioProfesor = { autor: string; texto: string; fecha: string };
+type ArchivoEntregado = { id: number; nombre: string };
+type DesgloseNota = {
+  nombre: string;
+  puntaje: number | null;
+  puntajeMaximo: number | null;
+  comentarios?: ComentarioProfesor[];
+  archivoEntregado?: ArchivoEntregado[];
+};
 type Calificacion = {
   curso: number;
   nombreCurso: string;
