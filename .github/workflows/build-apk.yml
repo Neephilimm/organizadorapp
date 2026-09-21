@@ -73,6 +73,17 @@ jobs:
               else:
                   print(f"Ya estaba presente: {esquema}")
 
+          # Permiso de alarmas exactas: sin esto, Android 12+ entrega las
+          # notificaciones programadas (recordatorios) de forma aproximada,
+          # con retrasos de minutos u horas, en vez de a la hora exacta.
+          permiso_alarma = '    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />\n'
+          if "SCHEDULE_EXACT_ALARM" not in manifest:
+              manifest = manifest.replace("<application", permiso_alarma + "    <application", 1)
+              cambiado = True
+              print("Permiso agregado: SCHEDULE_EXACT_ALARM")
+          else:
+              print("Ya estaba presente: SCHEDULE_EXACT_ALARM")
+
           if cambiado:
               with open(ruta, "w") as f:
                   f.write(manifest)
