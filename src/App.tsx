@@ -18,6 +18,7 @@ import {
   Settings
 } from 'lucide-react';
 import { supabase } from './lib/supabase';
+import { pedirPermisoNotificaciones } from './lib/notificaciones';
 import Dashboard from './pages/Dashboard';
 import Categorias from './pages/Categorias';
 import NuevoEvento from './pages/NuevoEvento';
