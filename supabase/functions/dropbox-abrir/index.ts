@@ -70,7 +70,7 @@ serve(withCors(async req => {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${conexion.access_token}`,
-        'Dropbox-API-Arg': JSON.stringify({ path })
+        'Dropbox-API-Arg': argParaCabecera({ path })
       }
     });
 
