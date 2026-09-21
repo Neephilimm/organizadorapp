@@ -59,6 +59,7 @@ export default function Canvas() {
 
   const [ramoAbierto, setRamoAbierto] = useState<number | null>(null);
   const [anuncioAbierto, setAnuncioAbierto] = useState<number | null>(null);
+  const [reproduciendo, setReproduciendo] = useState<{ nombre: string; url: string } | null>(null);
 
   useEffect(() => {
     cargar();
