@@ -137,7 +137,7 @@ serve(withCors(async req => {
 
       // Desglose de notas: cada tarea del curso con lo que el alumno sacó
       const asignRes = await fetch(
-        `${base}/courses/${curso.id}/assignments?include[]=submission&per_page=100`,
+        `${base}/courses/${curso.id}/assignments?include[]=submission&include[]=submission_comments&per_page=100`,
         { headers }
       );
       if (asignRes.ok) {
@@ -147,7 +147,18 @@ serve(withCors(async req => {
           .map((a: any) => ({
             nombre: a.name,
             puntaje: a.submission?.score ?? null,
-            puntajeMaximo: a.points_possible ?? null
+            puntajeMaximo: a.points_possible ?? null,
+            // Comentarios que dejó el profesor sobre la entrega (igual que en Canvas)
+            comentarios: (a.submission?.submission_comments ?? []).map((c: any) => ({
+              autor: c.author_name ?? 'Profesor/a',
+              texto: c.comment,
+              fecha: c.created_at
+            })),
+            // El/los archivo(s) que el propio alumno entregó, para poder verlos de nuevo
+            archivoEntregado: (a.submission?.attachments ?? []).map((f: any) => ({
+              id: f.id,
+              nombre: f.display_name ?? f.filename
+            }))
           }));
         const cal = calificaciones.find((c: any) => c.curso === curso.id);
         if (cal) cal.desglose = desglose;
