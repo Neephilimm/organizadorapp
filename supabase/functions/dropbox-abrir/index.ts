@@ -30,6 +30,17 @@ function withCors(handler: (req: Request) => Promise<Response>) {
   };
 }
 
+// Dropbox exige que la cabecera Dropbox-API-Arg sea puro ASCII: si el path
+// tiene tildes, ñ u otro caracter no-ASCII (algo casi seguro con nombres de
+// archivo en español), hay que escaparlo como \uXXXX o Dropbox rechaza la
+// descarga. Ver: https://www.dropbox.com/developers/reference/json-encoding
+function argParaCabecera(obj: unknown): string {
+  return JSON.stringify(obj).replace(
+    /[\u007f-\uffff]/g,
+    c => '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0')
+  );
+}
+
 serve(withCors(async req => {
   try {
     const { path, nombreArchivo } = await req.json();
