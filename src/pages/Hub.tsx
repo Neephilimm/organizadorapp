@@ -511,6 +511,22 @@ export default function Hub() {
           <p className="font-body text-sm text-ink/50">Todavía no has subido archivos.</p>
         )}
       </div>
+
+      {reproduciendo && (
+        <div className="fixed bottom-0 left-0 right-0 bg-ink text-white px-4 py-3 flex items-center gap-3 z-50 shadow-lg">
+          <button
+            onClick={() => setReproduciendo(null)}
+            aria-label="Cerrar reproductor"
+            className="shrink-0 font-mono text-sm"
+          >
+            ✕
+          </button>
+          <div className="min-w-0 flex-1">
+            <p className="font-body text-xs truncate mb-1">{reproduciendo.nombre}</p>
+            <audio src={reproduciendo.url} controls autoPlay className="w-full h-8" />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
