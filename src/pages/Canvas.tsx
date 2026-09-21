@@ -151,12 +151,23 @@ export default function Canvas() {
     setAbriendo(fileId);
     const { data } = await supabase.functions.invoke('canvas-abrir-archivo', { body: { fileId } });
     if (data?.ok) {
-      const escrito = await Filesystem.writeFile({
-        path: data.nombreArchivo ?? nombre,
-        data: data.archivoBase64,
-        directory: Directory.Cache
-      });
-      await Share.share({ title: data.nombreArchivo ?? nombre, url: escrito.uri });
+      const nombreFinal = data.nombreArchivo ?? nombre;
+      const mime = data.contentType || mimeDesdeNombre(nombreFinal);
+
+      if (esAudio(mime)) {
+        setReproduciendo({ nombre: nombreFinal, url: `data:${mime};base64,${data.archivoBase64}` });
+      } else {
+        const escrito = await Filesystem.writeFile({
+          path: nombreFinal,
+          data: data.archivoBase64,
+          directory: Directory.Cache
+        });
+        try {
+          await FileOpener.open({ filePath: escrito.uri, contentType: mime });
+        } catch {
+          await Share.share({ title: nombreFinal, url: escrito.uri });
+        }
+      }
     } else {
       alert(data?.error ?? 'No se pudo abrir el archivo.');
     }
