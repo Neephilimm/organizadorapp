@@ -73,6 +73,15 @@ export default function App() {
     return () => listener.subscription.unsubscribe();
   }, []);
 
+  useEffect(() => {
+    // Antes solo se pedía al crear un evento nuevo; si el usuario nunca
+    // pasaba por esa pantalla, Android nunca mostraba el diálogo y los
+    // recordatorios quedaban silenciados sin que se notara.
+    if (sesion) {
+      pedirPermisoNotificaciones();
+    }
+  }, [sesion]);
+
   async function manejarUrlDeepLink(url: string) {
     if (url.startsWith('cl.organizador.academico://login-callback')) {
       await Browser.close().catch(() => {});
