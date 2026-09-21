@@ -93,13 +93,20 @@ serve(withCors(async req => {
       );
     }
 
-    await supabaseAdmin.from('drive_tokens').upsert({
+    const { error: errorGuardado } = await supabaseAdmin.from('drive_tokens').upsert({
       user_id: user.id,
       access_token: tokenData.access_token,
       refresh_token: refreshToken,
       expira_en: expiraEn,
       updated_at: new Date().toISOString()
     });
+
+    if (errorGuardado) {
+      return new Response(
+        JSON.stringify({ ok: false, error: `No se pudo guardar la conexión: ${errorGuardado.message}` }),
+        { status: 200 }
+      );
+    }
 
     return new Response(JSON.stringify({ ok: true }), {
       headers: { 'Content-Type': 'application/json' }
