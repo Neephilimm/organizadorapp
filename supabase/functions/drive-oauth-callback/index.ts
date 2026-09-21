@@ -93,20 +93,28 @@ serve(withCors(async req => {
       );
     }
 
-    const { error: errorGuardado } = await supabaseAdmin.from('drive_tokens').upsert({
-      user_id: user.id,
-      access_token: tokenData.access_token,
-      refresh_token: refreshToken,
-      expira_en: expiraEn,
-      updated_at: new Date().toISOString()
-    });
+    console.log('drive-oauth-callback: guardando para user_id=', user.id, 'expiraEn=', expiraEn, 'tieneRefresh=', !!refreshToken);
+
+    const { data: filaGuardada, error: errorGuardado } = await supabaseAdmin
+      .from('drive_tokens')
+      .upsert({
+        user_id: user.id,
+        access_token: tokenData.access_token,
+        refresh_token: refreshToken,
+        expira_en: expiraEn,
+        updated_at: new Date().toISOString()
+      })
+      .select();
 
     if (errorGuardado) {
+      console.error('drive-oauth-callback: error al guardar ->', JSON.stringify(errorGuardado));
       return new Response(
         JSON.stringify({ ok: false, error: `No se pudo guardar la conexión: ${errorGuardado.message}` }),
         { status: 200 }
       );
     }
+
+    console.log('drive-oauth-callback: guardado ok, filas devueltas =', JSON.stringify(filaGuardada));
 
     return new Response(JSON.stringify({ ok: true }), {
       headers: { 'Content-Type': 'application/json' }
