@@ -232,6 +232,33 @@ export default function Hub() {
     if (inputArchivoDropbox.current) inputArchivoDropbox.current.value = '';
   }
 
+  // Si es audio, se reproduce ahí mismo (reproductor embebido más abajo).
+  // Si no, se abre con la app correspondiente del celular vía FileOpener
+  // (ACTION_VIEW), en vez de "compartir" (ACTION_SEND), que es lo que
+  // ocultaba apps como Google Docs, WPS Office, Galería, etc.
+  async function manejarArchivoDescargado(nombre: string, archivoBase64: string, contentTypeApi?: string) {
+    const mime = contentTypeApi || mimeDesdeNombre(nombre);
+
+    if (esAudio(mime)) {
+      setReproduciendo({ nombre, url: `data:${mime};base64,${archivoBase64}` });
+      return;
+    }
+
+    const escrito = await Filesystem.writeFile({
+      path: nombre,
+      data: archivoBase64,
+      directory: Directory.Cache
+    });
+
+    try {
+      await FileOpener.open({ filePath: escrito.uri, contentType: mime });
+    } catch {
+      // Sin ninguna app instalada que sepa abrir este tipo de archivo:
+      // ofrecemos "compartir" como respaldo (ej. para enviarlo por otro medio).
+      await Share.share({ title: nombre, url: escrito.uri });
+    }
+  }
+
   async function abrirArchivo(a: ArchivoHub) {
     setAbriendo(a.nombre);
 
@@ -249,12 +276,7 @@ export default function Hub() {
         body: { fileId: a.fileId, mimeType: a.mimeType, nombreArchivo: a.nombre }
       });
       if (data?.ok) {
-        const escrito = await Filesystem.writeFile({
-          path: data.nombreArchivo,
-          data: data.archivoBase64,
-          directory: Directory.Cache
-        });
-        await Share.share({ title: data.nombreArchivo, url: escrito.uri });
+        await manejarArchivoDescargado(data.nombreArchivo, data.archivoBase64, data.contentType);
       } else {
         alert(data?.error ?? 'No se pudo abrir el archivo.');
       }
@@ -263,12 +285,7 @@ export default function Hub() {
         body: { path: a.path, nombreArchivo: a.nombre }
       });
       if (data?.ok) {
-        const escrito = await Filesystem.writeFile({
-          path: data.nombreArchivo,
-          data: data.archivoBase64,
-          directory: Directory.Cache
-        });
-        await Share.share({ title: data.nombreArchivo, url: escrito.uri });
+        await manejarArchivoDescargado(data.nombreArchivo, data.archivoBase64, data.contentType);
       } else {
         alert(data?.error ?? 'No se pudo abrir el archivo.');
       }
