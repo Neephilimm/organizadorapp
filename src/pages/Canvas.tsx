@@ -258,12 +258,40 @@ export default function Canvas() {
                   ) : (
                     <div className="space-y-1">
                       {c.desglose.map((d, j) => (
-                        <div key={j} className="flex items-center justify-between">
-                          <p className="font-body text-sm text-ink/70 truncate pr-2">{d.nombre}</p>
-                          <p className="font-mono text-xs text-ink/50 shrink-0">
-                            {d.puntaje !== null ? d.puntaje : '—'}
-                            {d.puntajeMaximo !== null ? ` / ${d.puntajeMaximo}` : ''}
-                          </p>
+                        <div key={j} className="py-1">
+                          <div className="flex items-center justify-between">
+                            <p className="font-body text-sm text-ink/70 truncate pr-2">{d.nombre}</p>
+                            <p className="font-mono text-xs text-ink/50 shrink-0">
+                              {d.puntaje !== null ? d.puntaje : '—'}
+                              {d.puntajeMaximo !== null ? ` / ${d.puntajeMaximo}` : ''}
+                            </p>
+                          </div>
+
+                          {(d.archivoEntregado?.length ?? 0) > 0 && (
+                            <div className="mt-1 space-y-0.5">
+                              {d.archivoEntregado!.map(f => (
+                                <button
+                                  key={f.id}
+                                  onClick={() => abrirArchivoCanvas(f.id, f.nombre)}
+                                  disabled={abriendo === f.id}
+                                  className="block font-body text-xs text-teal disabled:opacity-50"
+                                >
+                                  {abriendo === f.id ? 'Abriendo…' : `📎 Tu entrega: ${f.nombre}`}
+                                </button>
+                              ))}
+                            </div>
+                          )}
+
+                          {(d.comentarios?.length ?? 0) > 0 && (
+                            <div className="mt-1 space-y-1 bg-paper rounded p-2">
+                              {d.comentarios!.map((com, k) => (
+                                <p key={k} className="font-body text-xs text-ink/60">
+                                  <span className="font-medium text-ink/80">{com.autor}: </span>
+                                  {com.texto}
+                                </p>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
