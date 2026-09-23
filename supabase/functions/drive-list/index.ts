@@ -31,15 +31,18 @@ function withCors(handler: (req: Request) => Promise<Response>) {
 }
 
 async function obtenerAccessTokenValido(supabaseAdmin: any, userId: string): Promise<string | null> {
-  const { data: conexion } = await supabaseAdmin
+  const { data: conexion, error: errorLectura } = await supabaseAdmin
     .from('drive_tokens')
     .select('*')
     .eq('user_id', userId)
     .maybeSingle();
 
+  console.log('drive-list: user_id=', userId, 'encontroFila=', !!conexion, 'errorLectura=', JSON.stringify(errorLectura));
+
   if (!conexion) return null;
 
   const yaVencido = new Date(conexion.expira_en).getTime() < Date.now() + 60_000;
+  console.log('drive-list: expira_en=', conexion.expira_en, 'yaVencido=', yaVencido);
   if (!yaVencido) return conexion.access_token;
 
   const params = new URLSearchParams({
