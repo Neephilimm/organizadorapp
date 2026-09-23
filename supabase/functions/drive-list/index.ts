@@ -57,7 +57,10 @@ async function obtenerAccessTokenValido(supabaseAdmin: any, userId: string): Pro
     body: params
   });
 
-  if (!respuesta.ok) return null;
+  if (!respuesta.ok) {
+    console.error('drive-list: fallo al renovar ->', respuesta.status, await respuesta.text());
+    return null;
+  }
   const tokenData = await respuesta.json();
 
   const expiraEn = new Date(Date.now() + tokenData.expires_in * 1000).toISOString();
