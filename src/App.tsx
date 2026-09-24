@@ -52,6 +52,7 @@ const GRUPOS_NAV = [
     items: [
       { to: '/hub', label: 'Archivos', icono: FolderOpen },
       { to: '/conversor', label: 'Conversor', icono: RefreshCw },
+      { to: '/transcripcion', label: 'Transcripción', icono: Mic },
       { to: '/herramientas', label: 'Herramientas', icono: Wrench },
       { to: '/noticias', label: 'Noticias', icono: Newspaper }
     ]
