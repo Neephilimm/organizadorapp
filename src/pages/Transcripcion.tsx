@@ -49,6 +49,8 @@ export default function Transcripcion() {
   const inputArchivo = useRef<HTMLInputElement>(null);
   const [archivo, setArchivo] = useState<File | null>(null);
   const [link, setLink] = useState('');
+  const [linkYoutube, setLinkYoutube] = useState('');
+  const [infoYoutube, setInfoYoutube] = useState<{ idioma: string; automatico: boolean } | null>(null);
 
   const [procesando, setProcesando] = useState(false);
   const [progreso, setProgreso] = useState('');
