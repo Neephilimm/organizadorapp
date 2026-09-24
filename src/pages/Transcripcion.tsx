@@ -279,6 +279,11 @@ export default function Transcripcion() {
 
       {transcripcion && (
         <section className="bg-white rounded-lg p-4 shadow-sm space-y-3">
+          {infoYoutube && (
+            <p className="font-mono text-[10px] uppercase tracking-widest text-ink/40">
+              Subtítulos {infoYoutube.automatico ? 'automáticos' : 'originales'} · {infoYoutube.idioma}
+            </p>
+          )}
           <p className="font-body text-sm text-ink/60 whitespace-pre-wrap max-h-96 overflow-y-auto">
             {transcripcion}
           </p>
