@@ -15,7 +15,8 @@ import {
   GraduationCap,
   BookOpen,
   PartyPopper,
-  Settings
+  Settings,
+  Mic
 } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import { pedirPermisoNotificaciones } from './lib/notificaciones';
