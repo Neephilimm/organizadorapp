@@ -296,6 +296,7 @@ export default function App() {
           <Route path="/herramientas" element={<Herramientas />} />
           <Route path="/hub" element={<Hub />} />
           <Route path="/conversor" element={<Convertidor />} />
+          <Route path="/transcripcion" element={<Transcripcion />} />
           <Route path="/ajustes" element={<Ajustes />} />
         </Routes>
       </div>
