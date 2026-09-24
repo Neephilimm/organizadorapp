@@ -140,6 +140,30 @@ export default function Transcripcion() {
     }
   }
 
+  async function transcribirDesdeYoutube() {
+    if (!linkYoutube.trim()) return;
+    setProcesando(true);
+    setError(null);
+    setTranscripcion(null);
+    setInfoYoutube(null);
+    setProgreso('Buscando subtítulos del video…');
+
+    try {
+      const { data, error: errorInvoke } = await supabase.functions.invoke('youtube-transcripcion', {
+        body: { url: linkYoutube.trim() }
+      });
+      if (errorInvoke) throw new Error('Fallo de red.');
+      if (!data?.ok) throw new Error(data?.error ?? 'No se pudo transcribir ese video.');
+      setTranscripcion(data.texto);
+      setInfoYoutube({ idioma: data.idioma, automatico: data.automatico });
+      setProgreso('¡Listo!');
+    } catch (e) {
+      setError(String(e instanceof Error ? e.message : e));
+    } finally {
+      setProcesando(false);
+    }
+  }
+
   async function copiarTexto() {
     if (!transcripcion) return;
     await navigator.clipboard.writeText(transcripcion);
