@@ -249,6 +249,30 @@ export default function Transcripcion() {
           </>
         )}
 
+        {modo === 'youtube' && (
+          <>
+            <input
+              type="url"
+              value={linkYoutube}
+              onChange={e => setLinkYoutube(e.target.value)}
+              placeholder="https://www.youtube.com/watch?v=…"
+              className="w-full font-body border border-ink/10 rounded px-3 py-2 text-sm"
+            />
+            <p className="font-body text-xs text-ink/40">
+              Usa los subtítulos que el video ya tiene en YouTube (manuales o automáticos). Si el
+              video no tiene subtítulos, no se puede transcribir por este medio — en ese caso
+              descarga el audio y usa "Subir archivo".
+            </p>
+            <button
+              onClick={transcribirDesdeYoutube}
+              disabled={!linkYoutube.trim() || procesando}
+              className="w-full bg-teal text-white rounded py-2 font-medium disabled:opacity-50"
+            >
+              {procesando ? 'Procesando…' : 'Transcribir video de YouTube'}
+            </button>
+          </>
+        )}
+
         {progreso && <p className="font-mono text-xs text-ink/50">{progreso}</p>}
         {error && <p className="font-body text-sm text-crimson">{error}</p>}
       </section>
