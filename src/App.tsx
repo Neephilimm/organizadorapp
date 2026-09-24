@@ -27,6 +27,7 @@ import Noticias from './pages/Noticias';
 import Herramientas from './pages/Herramientas';
 import Hub from './pages/Hub';
 import Convertidor from './pages/Convertidor';
+import Transcripcion from './pages/Transcripcion';
 import Canvas from './pages/Canvas';
 import Ajustes from './pages/Ajustes';
 import Feriados from './pages/Feriados';
