@@ -44,7 +44,7 @@ async function guardarComoTxt(texto: string) {
 }
 
 export default function Transcripcion() {
-  const [modo, setModo] = useState<'archivo' | 'link'>('archivo');
+  const [modo, setModo] = useState<'archivo' | 'link' | 'youtube'>('archivo');
 
   const inputArchivo = useRef<HTMLInputElement>(null);
   const [archivo, setArchivo] = useState<File | null>(null);
