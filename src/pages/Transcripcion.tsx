@@ -200,6 +200,12 @@ export default function Transcripcion() {
         >
           Desde un link
         </button>
+        <button
+          onClick={() => setModo('youtube')}
+          className={`flex-1 font-mono text-xs uppercase py-2 rounded ${modo === 'youtube' ? 'bg-ink text-paper' : 'bg-white text-ink/50'}`}
+        >
+          YouTube
+        </button>
       </div>
 
       <section className="bg-white rounded-lg p-4 shadow-sm space-y-3">
